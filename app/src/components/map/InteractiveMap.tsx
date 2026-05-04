@@ -30,6 +30,7 @@ export default function InteractiveMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(svgCache);
   const [loading, setLoading] = useState(!svgCache);
+  const [zoom, setZoom] = useState(1);
 
   // ── Fetch SVG once ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -70,6 +71,46 @@ export default function InteractiveMap({
       });
   }, [svgContent, highlightedCodes, activeCode, correctCode, wrongCode, mode]);
 
+  // ── Mouse wheel zoom ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      const zoomSensitivity = 0.002;
+      setZoom((prevZoom) => {
+        let newZoom = prevZoom - e.deltaY * zoomSensitivity;
+        newZoom = Math.max(0.5, Math.min(newZoom, 5)); // clamp zoom
+
+        const zoomRatio = newZoom / prevZoom;
+
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const contentX = container.scrollLeft + mouseX;
+        const contentY = container.scrollTop + mouseY;
+
+        const newContentX = contentX * zoomRatio;
+        const newContentY = contentY * zoomRatio;
+
+        requestAnimationFrame(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollLeft = newContentX - mouseX;
+            containerRef.current.scrollTop = newContentY - mouseY;
+          }
+        });
+
+        return newZoom;
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [svgContent]);
+
   // ── Click via event delegation ─────────────────────────────────────────────
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
     const target = (e.target as Element).closest('.atlas-region');
@@ -89,10 +130,15 @@ export default function InteractiveMap({
   return (
     <div
       ref={containerRef}
-      onClick={handleClick}
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: svgContent ?? '' }}
-      className="w-full rounded-xl overflow-hidden select-none [&_svg]:w-full [&_svg]:h-auto [&_.atlas-region]:transition-[fill] [&_.atlas-region]:duration-150 [&_.atlas-region:hover]:brightness-125"
-    />
+      className="w-full h-full rounded-xl overflow-auto select-none"
+    >
+      <div
+        onClick={handleClick}
+        style={{ width: `${zoom * 100}%`, minWidth: `${zoom * 1000}px` }}
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: svgContent ?? '' }}
+        className="[&_svg]:w-full [&_svg]:h-auto [&_.atlas-region]:transition-[fill] [&_.atlas-region]:duration-150 [&_.atlas-region:hover]:brightness-125 origin-top-left"
+      />
+    </div>
   );
 }

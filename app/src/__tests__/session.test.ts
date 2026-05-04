@@ -176,19 +176,10 @@ describe('session training', () => {
     expect(s.training.mapExplorerClicked).toHaveLength(1);
   });
 
-  it('tracks tiles separately', () => {
-    const s = makeSession();
-    updateTraining(s, 'tiles', 'NY');
-    expect(s.training.geoTilesClicked).toEqual(['NY']);
-    expect(s.training.mapExplorerClicked).toEqual([]);
-  });
-
-  it('completes when both zones have 63 regions', () => {
+  it('completes when 63 regions are explored', () => {
     const s = makeSession();
     const codes = Array.from({ length: 63 }, (_, i) => `R${i}`);
     codes.forEach((c) => updateTraining(s, 'map', c));
-    expect(isTrainingComplete(s)).toBe(false);
-    codes.forEach((c) => updateTraining(s, 'tiles', c));
     expect(isTrainingComplete(s)).toBe(true);
   });
 });
@@ -254,7 +245,6 @@ describe('session persistence', () => {
     saveSession(s, storage);
     const loaded = loadSession(storage)!;
     expect(loaded.training.mapExplorerClicked).toEqual([]);
-    expect(loaded.training.geoTilesClicked).toEqual([]);
     expect(loaded.training.completed).toBe(false);
   });
 });

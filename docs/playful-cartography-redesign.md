@@ -69,63 +69,63 @@ This applies to ALL screens:
 #### Animated Stickers (export as GIF or APNG, ~100-200KB each)
 Place in `assets/stickers/`:
 
-| Search in Canva | File name | Use | Export settings |
-|-----------------|-----------|-----|-----------------|
-| "map pin animated" or "location bounce" | pin-bounce.gif | Active game waypoint on journey map | GIF, transparent bg, 200x200px |
-| "compass spinning" | compass-spin.gif | Hub map decoration | GIF, transparent bg, 120x120px |
-| "celebration confetti" | celebrate.gif | Pass interstitial overlay | GIF, transparent bg, 400x400px |
-| "star sparkle animated" | star-sparkle.gif | Star earned moment | GIF, transparent bg, 80x80px |
-| "fire flame animated" | fire.gif | Streak indicator (3+) | GIF, transparent bg, 60x60px |
-| "checkmark animated" or "tick green" | checkmark.gif | Correct answer flash | GIF, transparent bg, 80x80px |
-| "trophy celebration" | trophy.gif | Results (all levels complete) | GIF, transparent bg, 200x200px |
-| "paper airplane flying" | airplane.gif | Level transition decoration | GIF, transparent bg, 150x80px |
-| "wave water animated" | wave.gif | Code Drop ambient decoration | GIF, transparent bg, 300x60px |
-| "sand dust wind" | sand-dust.gif | Pin Rush ambient decoration | GIF, transparent bg, 300x60px |
+| Search in Canva | File name | Preview | Use | Export settings |
+|-----------------|-----------|---------|-----|-----------------|
+| "map pin animated" or "location bounce" | pin-bounce.gif | ![pin-bounce](../app/public/assets/stickers/pin-bounce.gif) | Active game waypoint on journey map | GIF, transparent bg, 200x200px |
+| "compass spinning" | compass-spin.gif | ![compass-spin](../app/public/assets/stickers/compass-spin.gif) | Hub map decoration | GIF, transparent bg, 120x120px |
+| "celebration confetti" | celebrate.gif | ![celebrate](../app/public/assets/stickers/celebrate.gif) | Pass interstitial overlay | GIF, transparent bg, 400x400px |
+| "star sparkle animated" | star-sparkle.gif | ![star-sparkle](../app/public/assets/stickers/star-sparkle.gif) | Star earned moment | GIF, transparent bg, 80x80px |
+| "fire flame animated" | fire.gif | ![fire](../app/public/assets/stickers/fire.gif) | Streak indicator (3+) | GIF, transparent bg, 60x60px |
+| "checkmark animated" or "tick green" | checkmark.gif | ![checkmark](../app/public/assets/stickers/checkmark.gif) | Correct answer flash | GIF, transparent bg, 80x80px |
+| "trophy celebration" | trophy.gif | ![trophy](../app/public/assets/stickers/trophy.gif) | Results (all levels complete) | GIF, transparent bg, 200x200px |
+| "paper airplane flying" | airplane.gif | ![airplane](../app/public/assets/stickers/airplane.gif) | Level transition decoration | GIF, transparent bg, 150x80px |
+| "wave water animated" | wave.gif | ![wave](../app/public/assets/stickers/wave.gif) | Code Drop ambient decoration | GIF, transparent bg, 300x60px |
+| "sand dust wind" | sand-dust.gif | ![sand-dust](../app/public/assets/stickers/sand-dust.gif) | Pin Rush ambient decoration | GIF, transparent bg, 300x60px |
 
 #### Illustration Elements (export as SVG or PNG with transparent bg)
 Place in `assets/illustrations/`:
 
-| Search in Canva | File name | Use | Export |
-|-----------------|-----------|-----|--------|
-| "anchor nautical illustration" | anchor.svg | Code Drop (water) theme icon | SVG, 80x80px |
-| "cactus desert illustration" | cactus.svg | Pin Rush (desert) theme icon | SVG, 80x80px |
-| "pine tree forest illustration" | pine-tree.svg | City Stack (forest) theme icon | SVG, 80x80px |
-| "compass rose vintage" | compass-rose.svg | Journey map corner decoration | SVG, 200x200px |
-| "ribbon banner" or "scroll banner" | ribbon-banner.svg | Score/title decoration | SVG, 300x80px |
-| "treasure map" or "adventure map" | map-bg.png | Hub panel background texture | PNG, 800x600px, low opacity |
-| "parchment paper texture" | parchment.png | Card background texture tile | PNG, 400x400px, seamless if possible |
-| "watercolor splash blue" | splash-water.png | Code Drop card accent | PNG transparent, 300x300px |
-| "watercolor splash orange/yellow" | splash-desert.png | Pin Rush card accent | PNG transparent, 300x300px |
-| "watercolor splash green" | splash-forest.png | City Stack card accent | PNG transparent, 300x300px |
-| "world map illustration" or "globe" | globe-illustration.png | Landing page hero | PNG transparent, 400x400px |
-| "travel stickers set" | travel-stickers.png | Results page decorations | PNG transparent, 600x200px |
-| "wax seal stamp" | wax-seal.png | Badge unlock decoration | PNG transparent, 100x100px |
-| "torn paper edge" | torn-edge.png | City Stack card tops | PNG transparent, 400x20px |
-| "dotted trail path" | trail-path.svg | Journey map route connector | SVG, 600x50px |
+| Search in Canva | File name | Preview | Use | Export |
+|-----------------|-----------|---------|-----|--------|
+| "anchor nautical illustration" | anchor.svg | ![anchor](../app/public/assets/illustrations/anchor.svg) | Code Drop (water) theme icon | SVG, 80x80px |
+| "cactus desert illustration" | cactus.svg | ![cactus](../app/public/assets/illustrations/cactus.svg) | Pin Rush (desert) theme icon | SVG, 80x80px |
+| "pine tree forest illustration" | pine-tree.svg | ![pine-tree](../app/public/assets/illustrations/pine-tree.svg) | City Stack (forest) theme icon | SVG, 80x80px |
+| "compass rose vintage" | compass-rose.svg | ![compass-rose](../app/public/assets/illustrations/compass-rose.svg) | Journey map corner decoration | SVG, 200x200px |
+| "ribbon banner" or "scroll banner" | ribbon-banner.svg | ![ribbon-banner](../app/public/assets/illustrations/ribbon-banner.svg) | Score/title decoration | SVG, 300x80px |
+| "treasure map" or "adventure map" | map-bg.png | ![map-bg](../app/public/assets/illustrations/map-bg.png) | Hub panel background texture | PNG, 800x600px, low opacity |
+| "parchment paper texture" | parchment.png | ![parchment](../app/public/assets/illustrations/parchment.png) | Card background texture tile | PNG, 400x400px, seamless if possible |
+| "watercolor splash blue" | splash-water.png | ![splash-water](../app/public/assets/illustrations/splash-water.png) | Code Drop card accent | PNG transparent, 300x300px |
+| "watercolor splash orange/yellow" | splash-desert.png | ![splash-desert](../app/public/assets/illustrations/splash-desert.png) | Pin Rush card accent | PNG transparent, 300x300px |
+| "watercolor splash green" | splash-forest.png | ![splash-forest](../app/public/assets/illustrations/splash-forest.png) | City Stack card accent | PNG transparent, 300x300px |
+| "world map illustration" or "globe" | globe-illustration.png | ![globe-illustration](../app/public/assets/illustrations/globe-illustration.png) | Landing page hero | PNG transparent, 400x400px |
+| "travel stickers set" | travel-stickers.png | ![travel-stickers](../app/public/assets/illustrations/travel-stickers.png) | Results page decorations | PNG transparent, 600x200px |
+| "wax seal stamp" | wax-seal.png | ![wax-seal](../app/public/assets/illustrations/wax-seal.png) | Badge unlock decoration | PNG transparent, 100x100px |
+| "torn paper edge" | torn-edge.png | ![torn-edge](../app/public/assets/illustrations/torn-edge.png) | City Stack card tops | PNG transparent, 400x20px |
+| "dotted trail path" | trail-path.svg | ![trail-path](../app/public/assets/illustrations/trail-path.svg) | Journey map route connector | SVG, 600x50px |
 
 #### Background Videos (export as MP4, 720p, 5-10 seconds loop)
 Place in `assets/video/`:
 
-| Search in Canva | File name | Use | Export |
-|-----------------|-----------|-----|--------|
-| "ocean waves calm" or "water surface" | water-bg.mp4 | Code Drop ambient background (plays behind game at 10% opacity) | MP4, 720p, 8s loop, muted |
-| "sand dunes wind" or "desert sand" | desert-bg.mp4 | Pin Rush ambient background | MP4, 720p, 8s loop, muted |
-| "forest canopy light" or "leaves sunlight" | forest-bg.mp4 | City Stack ambient background | MP4, 720p, 8s loop, muted |
-| "paper texture moving" or "parchment" | paper-bg.mp4 | Landing page subtle background | MP4, 720p, 10s loop, muted |
+| Search in Canva | File name | Preview | Use | Export |
+|-----------------|-----------|---------|-----|--------|
+| "ocean waves calm" or "water surface" | water-bg.mp4 | [Video](../app/public/assets/video/water-bg.mp4) | Code Drop ambient background (plays behind game at 10% opacity) | MP4, 720p, 8s loop, muted |
+| "sand dunes wind" or "desert sand" | desert-bg.mp4 | [Video](../app/public/assets/video/desert-bg.mp4) | Pin Rush ambient background | MP4, 720p, 8s loop, muted |
+| "forest canopy light" or "leaves sunlight" | forest-bg.mp4 | [Video](../app/public/assets/video/forest-bg.mp4) | City Stack ambient background | MP4, 720p, 8s loop, muted |
+| "paper texture moving" or "parchment" | paper-bg.mp4 | [Video](../app/public/assets/video/paper-bg.mp4) | Landing page subtle background | MP4, 720p, 10s loop, muted |
 
 > NOTE: Videos will be `<video autoplay muted loop playsinline>` behind game cards at very low opacity (8-12%). They add atmospheric depth without distracting from gameplay. Keep file size under 2MB each.
 
 #### Custom Patterns/Textures (export as PNG, seamless tile)
 Place in `assets/patterns/`:
 
-| Search/Create in Canva | File name | Use | Export |
-|------------------------|-----------|-----|--------|
-| "topographic lines pattern" | topo-pattern.png | Body background tile | PNG, 400x400px, subtle/light |
-| "wave pattern blue" | wave-pattern.png | Water terrain card background | PNG, 200x100px, seamless |
-| "dot grid pattern" | dots-pattern.png | Desert terrain card background | PNG, 200x200px, seamless |
-| "contour lines green" | contour-pattern.png | Forest terrain card background | PNG, 200x200px, seamless |
-| "paper texture cream" | paper-grain.png | Card surface texture overlay | PNG, 300x300px, very subtle |
-| "confetti scattered" | confetti-pattern.png | Celebration background | PNG transparent, 600x600px |
+| Search/Create in Canva | File name | Preview | Use | Export |
+|------------------------|-----------|---------|-----|--------|
+| "topographic lines pattern" | topo-pattern.png | ![topo-pattern](../app/public/assets/patterns/topo-pattern.png) | Body background tile | PNG, 400x400px, subtle/light |
+| "wave pattern blue" | wave-pattern.png | ![wave-pattern](../app/public/assets/patterns/wave-pattern.png) | Water terrain card background | PNG, 200x100px, seamless |
+| "dot grid pattern" | dots-pattern.png | ![dots-pattern](../app/public/assets/patterns/dots-pattern.png) | Desert terrain card background | PNG, 200x200px, seamless |
+| "contour lines green" | contour-pattern.png | ![contour-pattern](../app/public/assets/patterns/contour-pattern.png) | Forest terrain card background | PNG, 200x200px, seamless |
+| "paper texture cream" | paper-grain.png | ![paper-grain](../app/public/assets/patterns/paper-grain.png) | Card surface texture overlay | PNG, 300x300px, very subtle |
+| "confetti scattered" | confetti-pattern.png | ![confetti-pattern](../app/public/assets/patterns/confetti-pattern.png) | Celebration background | PNG transparent, 600x600px |
 
 #### How to export from Canva:
 1. Open canva.com -> Elements tab
@@ -140,16 +140,16 @@ Place in `assets/patterns/`:
 
 Use ChatGPT's DALL-E to generate custom illustrations. Place in `assets/generated/`:
 
-| Prompt to use | File name | Use |
-|---------------|-----------|-----|
-| "A cute illustrated compass rose in a playful cartography style, vibrant colors, flat design, white background, no text" | compass-hero.png | Landing page hero decoration |
-| "3 illustrated game level icons in playful style: an ocean wave, a desert sun, and a forest tree, side by side, flat design, vibrant colors, transparent background" | level-icons.png | Journey map waypoint icons (crop into 3) |
-| "An illustrated treasure map border frame, playful cartography style, warm cream parchment, dashed paths, compass marks, vibrant colors" | map-frame.png | Hub map container border decoration |
-| "A set of 6 small illustrated landmark icons: Statue of Liberty, CN Tower, palm tree, mountain peak, cactus, lighthouse, playful flat style, vibrant colors, white background" | landmarks.png | Map landmark decorations (crop individually) |
-| "An illustrated 'LEVEL COMPLETE' celebration badge, ribbon banner style, gold and coral colors, playful cartography design, no realistic text" | level-complete-badge.png | Pass interstitial decoration |
-| "A playful illustrated expedition journal page with tape, stamps, and sticker decorations, warm cream background, empty center area" | journal-bg.png | Results page background texture |
-| "3 illustrated travel postcards stacked at slight angles, featuring ocean, desert, and forest scenes, playful colorful style" | postcards-stack.png | Results per-game decoration |
-| "A playful illustrated corkboard with pinned cards and ribbons, warm brown tones, empty slots for content" | corkboard-bg.png | Leaderboard background |
+| Prompt to use | File name | Preview | Use |
+|---------------|-----------|---------|-----|
+| "A cute illustrated compass rose in a playful cartography style, vibrant colors, flat design, white background, no text" | compass-hero.png | ![compass-hero](../app/public/assets/generated/compass-hero.png) | Landing page hero decoration |
+| "3 illustrated game level icons in playful style: an ocean wave, a desert sun, and a forest tree, side by side, flat design, vibrant colors, transparent background" | level-icons.png | ![level-icons](../app/public/assets/generated/level-icons.png) | Journey map waypoint icons (crop into 3) |
+| "An illustrated treasure map border frame, playful cartography style, warm cream parchment, dashed paths, compass marks, vibrant colors" | map-frame.png | ![map-frame](../app/public/assets/generated/map-frame.png) | Hub map container border decoration |
+| "A set of 6 small illustrated landmark icons: Statue of Liberty, CN Tower, palm tree, mountain peak, cactus, lighthouse, playful flat style, vibrant colors, white background" | landmarks.png | ![landmarks](../app/public/assets/generated/landmarks.png) | Map landmark decorations (crop individually) |
+| "An illustrated 'LEVEL COMPLETE' celebration badge, ribbon banner style, gold and coral colors, playful cartography design, no realistic text" | level-complete-badge.png | ![level-complete-badge](../app/public/assets/generated/level-complete-badge.png) | Pass interstitial decoration |
+| "A playful illustrated expedition journal page with tape, stamps, and sticker decorations, warm cream background, empty center area" | journal-bg.png | ![journal-bg](../app/public/assets/generated/journal-bg.png) | Results page background texture |
+| "3 illustrated travel postcards stacked at slight angles, featuring ocean, desert, and forest scenes, playful colorful style" | postcards-stack.png | ![postcards-stack](../app/public/assets/generated/postcards-stack.png) | Results per-game decoration |
+| "A playful illustrated corkboard with pinned cards and ribbons, warm brown tones, empty slots for content" | corkboard-bg.png | ![corkboard-bg](../app/public/assets/generated/corkboard-bg.png) | Leaderboard background |
 
 > TIP: Generate at 1024x1024, then resize/crop as needed. Save as PNG.
 
@@ -469,3 +469,19 @@ Total: ~60 asset files
 12. Mute toggle — persists across reload, no sound when muted
 13. Performance — no jank, videos don't block interaction, particles clean up
 14. Resolution test at 1280x720 — everything fits, no overflow
+
+---
+
+## Asset Gallery (Automated Previews)
+
+### Background Videos
+| Water | Desert | Forest | Paper |
+|-------|--------|--------|-------|
+| <video src="../app/public/assets/video/water-bg.mp4" width="160" controls muted></video> | <video src="../app/public/assets/video/desert-bg.mp4" width="160" controls muted></video> | <video src="../app/public/assets/video/forest-bg.mp4" width="160" controls muted></video> | <video src="../app/public/assets/video/paper-bg.mp4" width="160" controls muted></video> |
+
+### Lottie Animations (JSON Links)
+- [Confetti](../app/public/assets/lottie/confetti.json)
+- [Flag Plant](../app/public/assets/lottie/flag-plant.json)
+- [Globe](../app/public/assets/lottie/globe.json)
+- [Level Up](../app/public/assets/lottie/level-up.json)
+- [Trophy](../app/public/assets/lottie/trophy.json)

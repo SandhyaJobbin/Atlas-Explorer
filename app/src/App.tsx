@@ -3,7 +3,6 @@ import { SessionContext, useSessionState } from '@/hooks/useSession';
 import { AudioProvider } from '@/hooks/useAudio';
 import LandingPage from '@/features/landing/LandingPage';
 import MapExplorerPage from '@/features/training/MapExplorerPage';
-import GeoTilesPage from '@/features/training/GeoTilesPage';
 import TrainingCompletePage from '@/features/training/TrainingCompletePage';
 import GameShellPage from '@/features/games/GameShellPage';
 import ResultsPage from '@/features/results/ResultsPage';
@@ -46,7 +45,6 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
 
             <Route path="/train/map" element={<TrainingGuard><MapExplorerPage /></TrainingGuard>} />
-            <Route path="/train/tiles" element={<TrainingGuard><GeoTilesPage /></TrainingGuard>} />
             <Route path="/train/complete" element={<TrainingGuard><TrainingCompletePage /></TrainingGuard>} />
 
             <Route path="/play" element={<PlayGuard><GameShellPage /></PlayGuard>} />

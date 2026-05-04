@@ -62,7 +62,7 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
         {/* Background Journal Texture */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.08]" 
-          style={{ backgroundImage: 'url("/assets/patterns/journal-texture.png")', backgroundSize: '400px' }} 
+          style={{ backgroundImage: 'url("/assets/patterns/paper-grain.png")', backgroundSize: '400px' }} 
         />
         
         {/* Terrain Pattern */}

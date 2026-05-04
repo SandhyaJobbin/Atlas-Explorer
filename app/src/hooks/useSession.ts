@@ -35,7 +35,7 @@ interface SessionContextValue {
   session: Session | null;
   createNewSession: (name: string, waveCode: string, trainerName: string) => void;
   createDemoSession: () => void;
-  updateTraining: (type: 'map' | 'tiles', code: string) => void;
+  updateTraining: (type: 'map', code: string) => void;
   isTrainingComplete: () => boolean;
   recordAttempt: (
     gameIndexOrKey: number | string,
@@ -83,7 +83,7 @@ export function useSessionState(): SessionContextValue {
   }, []);
 
   const updateTraining = useCallback(
-    (type: 'map' | 'tiles', code: string) => {
+    (type: 'map', code: string) => {
       setSession((prev) => {
         if (!prev) return prev;
         const next = structuredClone(prev);

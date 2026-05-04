@@ -29,7 +29,6 @@ export interface StateEntry {
 
 export interface TrainingProgress {
   mapExplorerClicked: string[];
-  geoTilesClicked: string[];
   completed: boolean;
 }
 

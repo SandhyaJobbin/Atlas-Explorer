@@ -350,9 +350,9 @@ function CityCard({
           : 'bg-white/[0.08] border-white/20 text-white hover:border-[#10B981] hover:bg-white/[0.12] active:cursor-grabbing hover:-translate-y-1',
       ].join(' ')}
       style={{
-        maskImage: 'url("/assets/patterns/torn-edge.png")',
+        maskImage: 'url("/assets/illustrations/torn-edge.png")',
         maskSize: '100% 100%',
-        WebkitMaskImage: 'url("/assets/patterns/torn-edge.png")',
+        WebkitMaskImage: 'url("/assets/illustrations/torn-edge.png")',
         WebkitMaskSize: '100% 100%'
       }}
     >

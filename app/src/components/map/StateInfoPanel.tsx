@@ -18,23 +18,25 @@ const FLAG: Record<'US' | 'CA', string> = {
 };
 
 interface StateInfoPanelProps {
-  state: StateEntry | null;
+  state: StateEntry;
+  onClose: () => void;
 }
 
-export default function StateInfoPanel({ state }: StateInfoPanelProps) {
-  if (!state) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-[#2D3B2F]/40 text-sm gap-2 py-8">
-        <span className="text-3xl">🗺️</span>
-        <p>Click a state or province on the map</p>
-      </div>
-    );
-  }
-
+export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) {
+  if (!state) return null;
   const tzColor = TZ_COLORS[state.timezone] ?? 'bg-gray-500 text-white';
 
   return (
-    <div className="flex flex-col gap-4 p-4 h-full">
+    <div className="flex flex-col gap-4 p-5 bg-white rounded-2xl shadow-2xl w-80 relative border border-gray-100">
+      <button 
+        onClick={onClose}
+        className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+        aria-label="Close"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

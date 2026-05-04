@@ -12,7 +12,7 @@ export const GAME_DEFINITIONS = [
 const TOTAL_REGIONS = 63;
 
 function emptyTraining(): TrainingProgress {
-  return { mapExplorerClicked: [], geoTilesClicked: [], completed: false };
+  return { mapExplorerClicked: [], completed: false };
 }
 
 function makeGameStates(): GameState[] {
@@ -105,16 +105,15 @@ export function recordGameAttempt(
 
 export function updateTraining(
   session: Session,
-  type: 'map' | 'tiles',
+  type: 'map',
   code: string,
 ): void {
-  const field = type === 'map' ? 'mapExplorerClicked' : 'geoTilesClicked';
+  const field = 'mapExplorerClicked';
   if (!session.training[field].includes(code)) {
     session.training[field].push(code);
   }
   session.training.completed =
-    session.training.mapExplorerClicked.length >= TOTAL_REGIONS &&
-    session.training.geoTilesClicked.length >= TOTAL_REGIONS;
+    session.training.mapExplorerClicked.length >= TOTAL_REGIONS;
 }
 
 export function isTrainingComplete(session: Session): boolean {
@@ -186,10 +185,9 @@ export function loadSession(storage: Storage = globalThis.localStorage): Session
   if (!session.training) {
     session.training = emptyTraining();
   } else {
-    const t = session.training as Partial<TrainingProgress>;
+    const t = session.training as Partial<TrainingProgress> & { geoTilesClicked?: string[] };
     session.training = {
       mapExplorerClicked: Array.isArray(t.mapExplorerClicked) ? t.mapExplorerClicked : [],
-      geoTilesClicked: Array.isArray(t.geoTilesClicked) ? t.geoTilesClicked : [],
       completed: Boolean(t.completed),
     };
   }

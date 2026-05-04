@@ -168,7 +168,7 @@ export default function ResultsPage() {
         {/* Playful Cartography Background: Journal Texture */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.15] mix-blend-overlay" 
-          style={{ backgroundImage: 'url("/assets/patterns/journal-texture.png")', backgroundSize: '600px' }} 
+          style={{ backgroundImage: 'url("/assets/patterns/paper-grain.png")', backgroundSize: '600px' }} 
         />
         
         {/* Terrain Pattern */}
@@ -238,7 +238,7 @@ export default function ResultsPage() {
               >
                 {game.passed && (
                   <div className="absolute top-0 right-0 p-4 opacity-[0.03] grayscale pointer-events-none group-hover:opacity-10 transition-opacity">
-                    <img src="/assets/illustrations/compass.svg" className="w-24 h-24" alt="" />
+                    <img src="/assets/illustrations/compass-rose.svg" className="w-24 h-24" alt="" />
                   </div>
                 )}
                 

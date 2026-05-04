@@ -283,3 +283,18 @@ h1, h2, h3, .font-display {
 .page-wipe.active {
   animation: terrainWipe 1.2s cubic-bezier(0.8, 0, 0.2, 1) forwards;
 }
+
+/* Custom Scrollbar for Locked Pages */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 153, 0, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 153, 0, 0.4);
+}
