@@ -34,7 +34,7 @@ function tzBg(tz: string) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function PinRush({ onComplete, isRetry }: GameProps) {
+export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   
@@ -46,9 +46,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
   // ── Game state ────────────────────────────────────────────────────────────
   const [qi,           setQi]           = useState(0);
   const [score,        setScore]        = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
   const [streak,       setStreak]       = useState(0);
-  const [streakPeak,   setStreakPeak]   = useState(0);
   const [timeLeft,     setTimeLeft]     = useState(TIME_PER_QUESTION);
   const [locked,       setLocked]       = useState(false);
   const [correctCode,  setCorrectCode]  = useState<string | null>(null);
@@ -56,7 +54,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const startedAtRef    = useRef(0);
-  const timerRef        = useRef<ReturnType<typeof setInterval>>();
+  const timerRef        = useRef<ReturnType<typeof setTimeout>>(undefined);
   const scoreRef        = useRef(0);
   const correctCntRef   = useRef(0);
   const streakRef       = useRef(0);
@@ -84,7 +82,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
     setTimeLeft(TIME_PER_QUESTION);
     startedAtRef.current = Date.now();
 
-    clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimeLeft((t) => {
         if (t === 4) playSound('timer-warning');
@@ -98,7 +96,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
       });
     }, 1000);
 
-    return () => clearInterval(timerRef.current);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [qi, loading, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Click handler ─────────────────────────────────────────────────────────
@@ -106,7 +104,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
   const onRegionClick = useCallback((code: string) => {
     if (locked) return;
     playSound('click');
-    clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     pendingClickRef.current = code;
     setLocked(true);
   }, [locked]);
@@ -120,7 +118,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
 
     const clickedCode = pendingClickRef.current;
     pendingClickRef.current = undefined;
-    clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
 
     const q        = questions[qi];
     const elapsed  = (Date.now() - startedAtRef.current) / 1000;
@@ -151,9 +149,7 @@ export default function PinRush({ onComplete, isRetry }: GameProps) {
     if (streakRef.current > streakPeakRef.current) streakPeakRef.current = streakRef.current;
 
     setScore(scoreRef.current);
-    setCorrectCount(correctCntRef.current);
     setStreak(streakRef.current);
-    setStreakPeak(streakPeakRef.current);
 
     setTimeout(() => {
       const next = qi + 1;

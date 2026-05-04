@@ -6,7 +6,6 @@ import {
   calculatePoints,
   calculateStars,
   normalizeAttempt,
-  PASS_RATIO,
   BASE_POINTS,
   SPEED_BONUS_POINTS,
 } from '@/lib/scoring';

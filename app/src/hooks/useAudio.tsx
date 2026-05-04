@@ -9,7 +9,8 @@ type SoundName =
   | 'tick'
   | 'click'
   | 'star'
-  | 'badge';
+  | 'badge'
+  | 'timer-warning';
 
 interface FallbackTone {
   type: OscillatorType;
@@ -27,7 +28,8 @@ const SOUND_FILES: Record<SoundName, string> = {
   tick: '/sfx/Clock-tick.mp3',
   click: '/sfx/Soft-pop.mp3',
   star: '/sfx/Sparkle-ding.mp3',
-  badge: '/sfx/Fanfare.mp3'
+  badge: '/sfx/Fanfare.mp3',
+  'timer-warning': '/sfx/Timer-alert.mp3'
 };
 
 const FALLBACK_TONES: Record<SoundName, FallbackTone> = {
@@ -39,7 +41,8 @@ const FALLBACK_TONES: Record<SoundName, FallbackTone> = {
   tick: { type: 'square', notes: [880], duration: 0.055, volume: 0.045 },
   click: { type: 'triangle', notes: [420], duration: 0.045, volume: 0.035 },
   star: { type: 'sine', notes: [988, 1318], duration: 0.22, volume: 0.09 },
-  badge: { type: 'triangle', notes: [659, 880, 1175], duration: 0.42, volume: 0.12 }
+  badge: { type: 'triangle', notes: [659, 880, 1175], duration: 0.42, volume: 0.12 },
+  'timer-warning': { type: 'square', notes: [440, 440], duration: 0.4, volume: 0.08 }
 };
 
 const STORAGE_KEY = 'atlas_audio_muted';
@@ -117,7 +120,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       star: 0.4,
       pass: 0.46,
       fail: 0.34,
-      badge: 0.5
+      badge: 0.5,
+      'timer-warning': 0.4
     };
     return gains[name] || 0.36;
   };

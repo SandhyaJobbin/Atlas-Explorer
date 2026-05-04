@@ -96,13 +96,18 @@ export function getLocalScores(): LeaderboardRow[] {
   const totals = new Map<string, { agent: string; totalStars: number; badgeCount: number; _gamesPassed: Set<string> }>();
 
   readLocalScores().forEach((row) => {
-    if (!row.agent) return;
-    if (!totals.has(row.agent)) {
-      totals.set(row.agent, { agent: row.agent, totalStars: 0, badgeCount: 0, _gamesPassed: new Set() });
+    const agent = row.agent as string;
+    const stars = row.stars as number;
+    const game = row.game as string;
+    const passed = Boolean(row.passed);
+
+    if (!agent) return;
+    if (!totals.has(agent)) {
+      totals.set(agent, { agent, totalStars: 0, badgeCount: 0, _gamesPassed: new Set() });
     }
-    const entry = totals.get(row.agent)!;
-    entry.totalStars += Number(row.stars) || 0;
-    if (row.passed) entry._gamesPassed.add(row.game as string);
+    const entry = totals.get(agent)!;
+    entry.totalStars += Number(stars) || 0;
+    if (passed) entry._gamesPassed.add(game);
   });
 
   return [...totals.values()]

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GameProps } from '@/types';
 import { useAudio } from '@/hooks/useAudio';
 import { useParticles } from '@/components/ui/ParticleSystem';
@@ -21,7 +21,7 @@ type CardStatus = 'idle' | 'correct' | 'wrong';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CityStack({ onComplete, isRetry }: GameProps) {
+export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   
@@ -32,18 +32,16 @@ export default function CityStack({ onComplete, isRetry }: GameProps) {
   // ── Game state ────────────────────────────────────────────────────────────
   const [ri,           setRi]           = useState(0); // round index
   const [score,        setScore]        = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
   const [streak,       setStreak]       = useState(0);
-  const [streakPeak,   setStreakPeak]   = useState(0);
   const [timeLeft,     setTimeLeft]     = useState(TIME_PER_ROUND);
   const [cityLookup,   setCityLookup]   = useState<Map<string, CityWithId>>(new Map());
   const [placed,       setPlaced]       = useState<Set<string>>(new Set());
   const [cardStatus,   setCardStatus]   = useState<Record<string, CardStatus>>({});
   const [bucketPlaced, setBucketPlaced] = useState<Record<string, CityWithId[]>>({});
-  const [finished,     setFinished]     = useState(false);
+  const [_finished,    setFinished]     = useState(false);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const timerRef          = useRef<ReturnType<typeof setInterval>>();
+  const timerRef          = useRef<ReturnType<typeof setTimeout>>(undefined);
   const roundStartRef     = useRef(0);
   const scoreRef          = useRef(0);
   const correctCntRef     = useRef(0);
@@ -112,10 +110,8 @@ export default function CityStack({ onComplete, isRetry }: GameProps) {
 
     correctCntRef.current += correctInRound;
     scoreRef.current      += correctInRound * (10 + (speedBonus ? 3 : 0));
-    setCorrectCount(correctCntRef.current);
     setScore(scoreRef.current);
     setStreak(streakRef.current);
-    setStreakPeak(streakPeakRef.current);
 
     const nextRi = ri + 1;
     setTimeout(() => {
@@ -176,7 +172,6 @@ export default function CityStack({ onComplete, isRetry }: GameProps) {
       if (streakRef.current >= 3) playSound('streak');
       if (streakRef.current > streakPeakRef.current) streakPeakRef.current = streakRef.current;
       setStreak(streakRef.current);
-      setStreakPeak(streakPeakRef.current);
 
       const totalCities = BUCKETS_PER_ROUND * CITIES_PER_BUCKET;
       if (placedRef.current.size === totalCities) {
@@ -379,42 +374,46 @@ function Bucket({
   const [hovered, setHovered] = useState(false);
 
   return (
-    <AnimatedCard
-      tiltAmount={1}
+    <div
       onDragOver={(e) => { onDragOver(e); setHovered(true); }}
       onDragLeave={(e) => { onDragLeave(e); setHovered(false); }}
-      onDrop={(e) => { onDrop(e, stateCode); setHovered(false); }}
-      className={[
-        'flex flex-col gap-3 min-h-[260px] p-6 rounded-3xl border transition-all duration-300 relative overflow-hidden backdrop-blur-xl',
-        hovered
-          ? 'border-[#10B981]/50 bg-[#10B981]/15 shadow-[0_0_40px_rgba(16,185,129,0.2)] scale-[1.03]'
-          : 'border-white/10 bg-black/40',
-      ].join(' ')}
+      onDrop={(e: React.DragEvent) => { onDrop(e, stateCode); setHovered(false); }}
+      className="flex-1"
     >
-      <h3 className="text-white font-black text-xs uppercase tracking-[0.3em] text-center pb-4 border-b border-white/10">
-        {stateName}
-      </h3>
-      
-      <div className="flex flex-col gap-3 relative z-10 flex-1 justify-start">
-        {placedCities.map((city) => (
-          <div
-            key={city.id}
-            className="rounded-xl bg-[#10B981]/20 border border-[#10B981]/40 text-[#10B981] px-5 py-3 text-xs font-black text-center shadow-inner animate-in zoom-in duration-300"
-          >
-            {city.name}
-          </div>
-        ))}
-        {placedCities.length === 0 && !hovered && (
-          <div className="flex-1 flex flex-col items-center justify-center opacity-10">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/50 animate-spin-slow mb-2" />
-            <span className="text-[8px] font-black uppercase tracking-widest text-white">Standby</span>
-          </div>
-        )}
-      </div>
+      <AnimatedCard
+        tiltAmount={1}
+        className={[
+          'flex flex-col gap-3 min-h-[260px] p-6 rounded-3xl border transition-all duration-300 relative overflow-hidden backdrop-blur-xl h-full',
+          hovered
+            ? 'border-[#10B981]/50 bg-[#10B981]/15 shadow-[0_0_40px_rgba(16,185,129,0.2)] scale-[1.03]'
+            : 'border-white/10 bg-black/40',
+        ].join(' ')}
+      >
+        <h3 className="text-white font-black text-xs uppercase tracking-[0.3em] text-center pb-4 border-b border-white/10">
+          {stateName}
+        </h3>
+        
+        <div className="flex flex-col gap-3 relative z-10 flex-1 justify-start">
+          {placedCities.map((city) => (
+            <div
+              key={city.id}
+              className="rounded-xl bg-[#10B981]/20 border border-[#10B981]/40 text-[#10B981] px-5 py-3 text-xs font-black text-center shadow-inner animate-in zoom-in duration-300"
+            >
+              {city.name}
+            </div>
+          ))}
+          {placedCities.length === 0 && !hovered && (
+            <div className="flex-1 flex flex-col items-center justify-center opacity-10">
+              <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/50 animate-spin-slow mb-2" />
+              <span className="text-[8px] font-black uppercase tracking-widest text-white">Standby</span>
+            </div>
+          )}
+        </div>
 
-      <div className="absolute -bottom-6 -right-6 text-8xl font-black italic tracking-tighter text-white opacity-[0.02] select-none pointer-events-none">
-        {stateCode}
-      </div>
-    </AnimatedCard>
+        <div className="absolute -bottom-6 -right-6 text-8xl font-black italic tracking-tighter text-white opacity-[0.02] select-none pointer-events-none">
+          {stateCode}
+        </div>
+      </AnimatedCard>
+    </div>
   );
 }

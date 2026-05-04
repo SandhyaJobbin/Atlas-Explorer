@@ -15,26 +15,9 @@ import {
   START_TOP,
 } from '@/lib/crack-the-code';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const TZ_COLORS: Record<string, string> = {
-  PST:  'bg-blue-500/20  text-blue-300  border-blue-500/40',
-  MST:  'bg-orange-500/20 text-orange-300 border-orange-500/40',
-  CST:  'bg-green-500/20 text-green-300 border-green-500/40',
-  EST:  'bg-purple-500/20 text-purple-300 border-purple-500/40',
-  AKST: 'bg-sky-500/20   text-sky-300   border-sky-500/40',
-  HST:  'bg-pink-500/20  text-pink-300  border-pink-500/40',
-  AST:  'bg-teal-500/20  text-teal-300  border-teal-500/40',
-  NST:  'bg-red-500/20   text-red-300   border-red-500/40',
-};
-
-function tzColor(tz: string) {
-  return TZ_COLORS[tz] ?? 'bg-white/10 text-white/70 border-white/20';
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CodeDrop({ onComplete, isRetry }: GameProps) {
+export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   
@@ -45,9 +28,7 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
   // ── Game state ────────────────────────────────────────────────────────────
   const [qi,           setQi]           = useState(0);
   const [score,        setScore]        = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
   const [streak,       setStreak]       = useState(0);
-  const [streakPeak,   setStreakPeak]   = useState(0);
   const [inputVal,     setInputVal]     = useState('');
   const [locked,       setLocked]       = useState(false);
   const [blockTopPx,   setBlockTopPx]   = useState(-60);
@@ -64,6 +45,7 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
   const correctCountRef        = useRef(0);
   const streakRef              = useRef(0);
   const streakPeakRef          = useRef(0);
+  const timerRef               = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef           = useRef<HTMLDivElement>(null);
 
   // ── Load data ─────────────────────────────────────────────────────────────
@@ -92,7 +74,6 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
 
     let rafId:  number;
     let timer1: ReturnType<typeof setTimeout>;
-    let timer2: ReturnType<typeof setTimeout>;
     let done = false;
     let warningPlayed = false;
 
@@ -100,7 +81,7 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
       done = true;
       cancelAnimationFrame(rafId);
       clearTimeout(timer1);
-      clearTimeout(timer2);
+      if (timerRef.current) clearTimeout(timerRef.current);
     }
     cancelCurrentRef.current = cancel;
 
@@ -131,7 +112,7 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
       setStreak(0);
       setBlockVisible(false);
       setLocked(true);
-      timer2 = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         const next = qi + 1;
         if (next >= TOTAL_QUESTIONS) {
           onComplete({
@@ -156,10 +137,10 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
 
   // ── Answer handlers ───────────────────────────────────────────────────────
 
-  function commitCorrect() {
+  function commitCorrect(element?: HTMLElement) {
     cancelCurrentRef.current();
     playSound('correct');
-    triggerBurst(null, 'cyber-burst');
+    triggerBurst(element || null, 'gold-spark');
     
     const elapsed    = (Date.now() - startedAtRef.current) / 1000;
     const pts        = calculatePoints(true, elapsed, SPEED_WINDOW);
@@ -176,9 +157,7 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
     if (newStreak >= 3) playSound('streak');
 
     setScore(newScore);
-    setCorrectCount(newCorrect);
     setStreak(newStreak);
-    setStreakPeak(newPeak);
     setBlockLocked(true);
     setLocked(true);
 
@@ -198,7 +177,7 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
     if (q.type !== 'code') return;
 
     if (checkCodeAnswer(q.state.code, inputVal)) {
-      commitCorrect();
+      commitCorrect(inputRef.current || undefined);
     } else {
       playSound('wrong');
       setInputVal('');
@@ -421,4 +400,3 @@ export default function CodeDrop({ onComplete, isRetry }: GameProps) {
     </main>
   );
 }
-

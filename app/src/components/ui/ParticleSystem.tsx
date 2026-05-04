@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 
 export type ParticleType = 
   | 'sparkle' 

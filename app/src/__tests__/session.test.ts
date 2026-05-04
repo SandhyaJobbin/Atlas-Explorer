@@ -14,7 +14,6 @@ import {
   saveSession,
   loadSession,
   clearSession,
-  GAME_DEFINITIONS,
 } from '@/lib/session';
 import type { Session } from '@/types';
 
@@ -221,8 +220,8 @@ describe('session persistence', () => {
 
   it('loadSession hydrates earnedBadges and lastKnownRank defaults', () => {
     const s = makeSession();
-    delete (s as Record<string, unknown>).earnedBadges;
-    delete (s as Record<string, unknown>).lastKnownRank;
+    delete (s as any).earnedBadges;
+    delete (s as any).lastKnownRank;
     saveSession(s, storage);
     const loaded = loadSession(storage)!;
     expect(loaded.earnedBadges).toEqual([]);
@@ -231,8 +230,8 @@ describe('session persistence', () => {
 
   it('loadSession preserves legacy demo flag', () => {
     const s = makeSession();
-    (s as Record<string, unknown>).demo = true;
-    delete (s as Record<string, unknown>).mode;
+    (s as any).demo = true;
+    delete (s as any).mode;
     saveSession(s, storage);
     const loaded = loadSession(storage)!;
     expect(loaded.mode).toBe('demo');
@@ -241,7 +240,7 @@ describe('session persistence', () => {
 
   it('loadSession migrates missing training field', () => {
     const s = makeSession();
-    delete (s as Record<string, unknown>).training;
+    delete (s as any).training;
     saveSession(s, storage);
     const loaded = loadSession(storage)!;
     expect(loaded.training.mapExplorerClicked).toEqual([]);

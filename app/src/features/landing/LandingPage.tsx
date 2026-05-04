@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
 import { useAudio } from '@/hooks/useAudio';
@@ -354,7 +354,7 @@ export default function LandingPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {STEPS.map((step, i) => (
+                {STEPS.map((step) => (
                   <AnimatedCard key={step.num} tiltAmount={4} className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md relative group overflow-hidden">
                     <div className="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[8px] font-black uppercase tracking-widest text-white/30 rounded-bl-xl border-l border-b border-white/5">
                       {step.tag}

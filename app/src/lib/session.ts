@@ -105,7 +105,7 @@ export function recordGameAttempt(
 
 export function updateTraining(
   session: Session,
-  type: 'map',
+  _type: 'map',
   code: string,
 ): void {
   const field = 'mapExplorerClicked';
@@ -206,7 +206,6 @@ export function loadSession(storage: Storage = globalThis.localStorage): Session
       ...game,
       key: definition.key,
       label: definition.label,
-      earnedBadges: Array.isArray(game.earnedBadges) ? game.earnedBadges : [],
       attempts,
     } as GameState;
   });

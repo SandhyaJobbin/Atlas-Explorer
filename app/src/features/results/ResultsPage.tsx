@@ -39,7 +39,7 @@ const BADGE_DESCS: Record<string, string> = {
 
 function AnimatedCount({ target, duration = 1200 }: { target: number; duration?: number }) {
   const [value, setValue] = useState(0);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (target === 0) return;
@@ -147,7 +147,6 @@ export default function ResultsPage() {
   const allPassed    = isAllPassed(session);
   const totalScore   = getTotalScore(session);
   const totalStars   = getTotalStars(session);
-  const maxStars     = GAME_DEFINITIONS.length * 3;
   const levelsPassed = session.games.filter((g) => g.passed).length;
 
   function handlePlayAgain() {
@@ -157,8 +156,10 @@ export default function ResultsPage() {
   }
 
   function handleDownload() {
-    playSound('click');
-    downloadCertificate(session);
+    if (session) {
+      playSound('click');
+      downloadCertificate(session);
+    }
   }
 
   return (
