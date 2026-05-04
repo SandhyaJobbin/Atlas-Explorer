@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 export default defineConfig({
+  base: '/Atlas-Explorer/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

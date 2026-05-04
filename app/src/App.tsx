@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { SessionContext, useSessionState } from '@/hooks/useSession';
 import { AudioProvider } from '@/hooks/useAudio';
 import LandingPage from '@/features/landing/LandingPage';
@@ -38,7 +38,7 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AudioProvider>
         <SessionProvider>
           <Routes>
@@ -54,7 +54,7 @@ export default function App() {
           </Routes>
         </SessionProvider>
       </AudioProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
