@@ -1,0 +1,11 @@
+{
+  "correct": "/assets/audio/kenney_interface-sounds/Audio/confirmation_002.ogg",
+  "wrong": "/assets/audio/kenney_interface-sounds/Audio/error_004.ogg",
+  "streak": "/assets/audio/kenney_interface-sounds/Audio/maximize_005.ogg",
+  "pass": "/assets/audio/cheers.mp3",
+  "fail": "/assets/audio/kenney_interface-sounds/Audio/error_007.ogg",
+  "tick": "/assets/audio/kenney_interface-sounds/Audio/tick_001.ogg",
+  "click": "/assets/audio/kenney_interface-sounds/Audio/click_002.ogg",
+  "star": "/assets/audio/kenney_interface-sounds/Audio/glass_004.ogg",
+  "badge": "/assets/audio/cheers.mp3"
+}

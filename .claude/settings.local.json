@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(cp \"C:/Users/anoop/OneDrive/Desktop/AMZ/maps/\"* \"C:/Users/anoop/OneDrive/Desktop/AMZ/app/public/maps/\")",
+      "Bash(cp \"C:/Users/anoop/OneDrive/Desktop/AMZ/assets/\"* \"C:/Users/anoop/OneDrive/Desktop/AMZ/app/public/assets/\")",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(node:*)",
+      "Bash(node -e \":*)",
+      "Bash(head:*)",
+      "Bash(cp \"C:/Users/anoop/OneDrive/Desktop/AMZ/maps/north-america.svg\" \"C:/Users/anoop/OneDrive/Desktop/AMZ/app/public/maps/north-america.svg\")",
+      "Bash(cp \"C:/Users/anoop/OneDrive/Desktop/AMZ/maps/north-america.svg\" \"C:/Users/anoop/OneDrive/Desktop/AMZ/app/dist/maps/north-america.svg\")",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ/js -type f -name *.js)",
+      "Bash(find C:UsersanoopOneDriveDesktopAMZ2/src -type f -name *.js -o -name *.jsx -o -name *.ts -o -name *.tsx)",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ4 -type f -name *.html -o -name *.js)",
+      "Bash(find C:UsersanoopOneDriveDesktopAMZ3 -type f -name *.js -o -name *.jsx)",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ5/src -type f -name *.jsx -o -name *.js)",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ2/src -type f -name *.jsx -o -name *.js)",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ3/src -type f -name *.jsx -o -name *.js)",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ4/src -type f -name *.jsx -o -name *.js)",
+      "Bash(grep -n \"prefers-reduced-motion\\\\|prefersReducedMotion\\\\|reduced-motion\" /c/Users/anoop/OneDrive/Desktop/AMZ/js/*.js)",
+      "Bash(grep -r \"lottieMarkup\\\\|lottie-player\" /c/Users/anoop/OneDrive/Desktop/AMZ --include=*.js --include=*.html -n)",
+      "Bash(grep -E \"\\\\.gif$\")",
+      "Bash(wc -l /c/Users/anoop/OneDrive/Desktop/AMZ/app/src/**/*.tsx)",
+      "Bash(find /c/Users/anoop/OneDrive/Desktop/AMZ -type d -name stitch_comprehensive_ui_enhancement -o -type d -name 'svg \\(2\\)' -o -type d -name archive)",
+      "Bash(ls -la '/c/Users/anoop/OneDrive/Desktop/AMZ/svg \\(2\\)/')",
+      "Bash(grep -E \"\\\\.\\(mp3|wav|ogg|m4a\\)$\")",
+      "Bash(grep:*)",
+      "Bash(npm test:*)",
+      "Bash(ls stitch_comprehensive_ui_enhancement \"svg \\(2\\)\" css/retro.css STITCH_UI_BRIEF.md)",
+      "Bash(ls -la /c/Users/anoop/OneDrive/Desktop/AMZ/js/*.js)"
+    ]
+  }
+}
