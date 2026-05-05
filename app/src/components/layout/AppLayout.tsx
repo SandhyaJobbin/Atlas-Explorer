@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { publicAsset } from '@/lib/assets';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -25,7 +26,7 @@ export default function AppLayout({ children, variant = 'default' }: AppLayoutPr
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.15] z-0 mix-blend-overlay"
         style={{ 
-          backgroundImage: 'url("/assets/patterns/paper-grain.png")',
+          backgroundImage: `url("${publicAsset('/assets/patterns/paper-grain.png')}")`,
           backgroundSize: '300px'
         }}
       />

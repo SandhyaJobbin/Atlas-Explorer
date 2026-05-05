@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { publicAsset } from '@/lib/assets';
 
 type SoundName = 
   | 'correct'
@@ -139,7 +140,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         let buffer = bufferCache.current.get(name);
         if (!buffer) {
           const path = SOUND_FILES[name];
-          const response = await fetch(path);
+          const response = await fetch(publicAsset(path));
           if (response.ok) {
             const arrayBuffer = await response.arrayBuffer();
             buffer = await ctx.decodeAudioData(arrayBuffer);

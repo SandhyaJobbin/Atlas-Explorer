@@ -60,4 +60,8 @@ export function checkTimezoneClick(timezone: Timezone, clickedCode: string, allS
   return allStates.find((s) => s.code === clickedCode)?.timezone === timezone;
 }
 
+export function isMapQuestion(q: PinQuestion): q is MapQuestion {
+  return q.type === 'map';
+}
+
 export { calculatePoints };

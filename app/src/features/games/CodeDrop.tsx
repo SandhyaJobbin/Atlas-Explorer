@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameProps, StateEntry } from '@/types';
-import { useAudio } from '@/hooks/useAudio';
+import InfoCard from '@/components/ui/InfoCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
+import { useAudio } from '@/hooks/useAudio';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { publicAsset } from '@/lib/assets';
+import { useScorePopups } from '@/components/ui/ScorePopup';
 import {
   pickQuestions,
   checkCodeAnswer,
@@ -20,6 +23,7 @@ import {
 export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
+  const { triggerScore, ScorePopups } = useScorePopups();
   
   // ── Data ──────────────────────────────────────────────────────────────────
   const [questions, setQuestions] = useState<DropQuestion[]>([]);
@@ -35,6 +39,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
   const [blockVisible, setBlockVisible] = useState(false);
   const [blockLocked,  setBlockLocked]  = useState(false);
   const [wrongFlash,   setWrongFlash]   = useState(false);
+  const [correctState, setCorrectState] = useState<StateEntry | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const startedAtRef           = useRef(0);
@@ -46,11 +51,13 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
   const streakRef              = useRef(0);
   const streakPeakRef          = useRef(0);
   const timerRef               = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const advanceTimerRef        = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef           = useRef<HTMLDivElement>(null);
+  const inputValRef            = useRef('');
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch('/data/states.json')
+    fetch(publicAsset('/data/states.json'))
       .then((r) => r.json())
       .then((data: StateEntry[]) => {
         setQuestions(pickQuestions(data));
@@ -63,10 +70,12 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
     if (loading || !questions.length || qi >= TOTAL_QUESTIONS) return;
 
     setInputVal('');
+    inputValRef.current = '';
     setLocked(false);
     setBlockLocked(false);
     setBlockVisible(true);
     setBlockTopPx(START_TOP);
+    setCorrectState(null);
     startedAtRef.current = Date.now();
 
     const zoneHeight = zoneRef.current?.clientHeight ?? 520;
@@ -135,6 +144,21 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
     if (!locked && !loading) inputRef.current?.focus();
   }, [qi, locked, loading]);
 
+  function advanceQuestion() {
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    const next = qi + 1;
+    if (next >= TOTAL_QUESTIONS) {
+      onComplete({ 
+        score: scoreRef.current, 
+        correctCount: correctCountRef.current, 
+        totalCount: TOTAL_QUESTIONS, 
+        streakPeak: streakPeakRef.current 
+      });
+    } else {
+      setQi(next);
+    }
+  }
+
   // ── Answer handlers ───────────────────────────────────────────────────────
 
   function commitCorrect(element?: HTMLElement) {
@@ -156,31 +180,37 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
 
     if (newStreak >= 3) playSound('streak');
 
+    // Trigger score popup
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      triggerScore(rect.left + rect.width / 2, rect.top, pts);
+    } else {
+      triggerScore(window.innerWidth / 2, window.innerHeight / 2, pts);
+    }
+
     setScore(newScore);
     setStreak(newStreak);
     setBlockLocked(true);
     setLocked(true);
+    setCorrectState(questions[qi].state);
 
-    setTimeout(() => {
-      const next = qi + 1;
-      if (next >= TOTAL_QUESTIONS) {
-        onComplete({ score: newScore, correctCount: newCorrect, totalCount: TOTAL_QUESTIONS, streakPeak: newPeak });
-      } else {
-        setQi(next);
-      }
-    }, 600);
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = setTimeout(advanceQuestion, 4000);
   }
 
-  function handleCodeSubmit() {
+  function handleCodeSubmit(explicitVal?: string) {
     if (locked || !questions.length) return;
     const q = questions[qi];
     if (q.type !== 'code') return;
 
-    if (checkCodeAnswer(q.state.code, inputVal)) {
+    const valToMatch = explicitVal ?? inputValRef.current;
+
+    if (checkCodeAnswer(q.state.code, valToMatch)) {
       commitCorrect(inputRef.current || undefined);
     } else {
       playSound('wrong');
       setInputVal('');
+      inputValRef.current = '';
       setWrongFlash(true);
       setTimeout(() => setWrongFlash(false), 350);
     }
@@ -205,6 +235,8 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
 
   const currentQ   = questions[qi];
   const progress   = questions.length ? Math.round((qi / TOTAL_QUESTIONS) * 100) : 0;
+  const timerPct   = 100 - ((Date.now() - startedAtRef.current) / FALL_DURATION_MS) * 100;
+  const timerUrgent = timerPct < 30 && blockVisible && !blockLocked;
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
@@ -230,14 +262,20 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
         playsInline
         className="absolute inset-0 w-full h-full object-cover opacity-[0.15] pointer-events-none"
       >
-        <source src="/assets/video/water-bg.mp4" type="video/mp4" />
+        <source src={publicAsset('/assets/video/water-bg.mp4')} type="video/mp4" />
       </video>
 
       {/* Terrain Pattern Overlay */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.08]" 
-        style={{ backgroundImage: 'url("/assets/patterns/topo-pattern.png")', backgroundSize: '400px' }} 
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/topo-pattern.png')}")`, backgroundSize: '400px' }} 
       />
+
+      {/* Timer Urgency Vignette */}
+      <div className={`timer-urgency ${timerUrgent ? 'active' : ''}`} />
+
+      {/* Score Popups */}
+      <ScorePopups />
 
       {/* Top bar */}
       <div className="flex items-center justify-between relative z-10">
@@ -261,20 +299,31 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
-            <strong className="text-[#06B6D4] font-mono text-xl leading-none">{streak}x</strong>
+            <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
+              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-[#06B6D4]'}`}>
+                {streak}x
+              </strong>
+              {streak >= 5 && (
+                <img 
+                  src={publicAsset('/assets/stickers/fire.gif')} 
+                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none" 
+                  alt="" 
+                />
+              )}
+            </div>
           </div>
         </AnimatedCard>
       </div>
 
       {/* Progress Header */}
-      <div className="relative z-10 px-2 space-y-2">
-        <div className="flex justify-between items-end text-[9px] font-black tracking-[0.2em] uppercase">
-          <span className="text-white/30">Depth Progress: {progress}%</span>
-          <span className="text-[#06B6D4]">{qi + 1} OF {TOTAL_QUESTIONS}</span>
+      <div className="relative z-10 px-2 space-y-1.5">
+        <div className="flex justify-between items-end text-[10px] font-black tracking-[0.2em] uppercase">
+          <span className="text-[#06B6D4]">Depth: {qi + 1} <span className="text-white/20">/</span> {TOTAL_QUESTIONS}</span>
+          <span className="text-white/30">{progress}%</span>
         </div>
-        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden shadow-inner">
+        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden shadow-inner border border-white/10">
           <div
-            className="h-full bg-gradient-to-r from-[#06B6D4] to-[#22C55E] transition-all duration-300 shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+            className="h-full bg-gradient-to-r from-[#06B6D4] to-[#22C55E] transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -300,14 +349,14 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
               transform: `translateX(-50%) rotate(${(qi % 2 === 0 ? 1 : -1) * (blockLocked ? 0 : 2)}deg)`
             }}
           >
-            <span className="block text-[#06B6D4] text-[10px] uppercase tracking-[0.3em] font-black mb-2 text-center">Cipher Signal</span>
+            <span className="block text-[#06B6D4] text-[10px] uppercase tracking-[0.15em] font-bold mb-2 text-center">Cipher Signal</span>
             <span className="block font-black text-3xl tracking-tight text-center">
               {blockLocked ? 'SECURED' : currentQ.state.name}
             </span>
             {!blockLocked && (
               <div className="mt-3 flex items-center justify-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#06B6D4] animate-pulse" />
-                <span className="text-[10px] text-white/50 uppercase tracking-[0.2em] font-black">
+                <span className="text-[10px] text-white/50 uppercase tracking-[0.1em] font-bold">
                   {currentQ.type === 'code' ? 'Input ID' : 'Select Zone'}
                 </span>
               </div>
@@ -316,12 +365,19 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
         )}
 
         {/* Floating Bubbles (Decorative) */}
-        <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-20 flex justify-around items-end">
-          {[...Array(6)].map((_, i) => (
+        <div className="absolute inset-x-0 bottom-0 h-48 pointer-events-none overflow-hidden">
+          {[...Array(12)].map((_, i) => (
             <div 
               key={i} 
-              className="w-4 h-4 rounded-full border border-white/40 animate-bounce" 
-              style={{ animationDelay: `${i * 0.5}s`, animationDuration: `${3 + i}s` }}
+              className="absolute bottom-0 rounded-full border border-white/40 bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.3)] animate-bubble-rise" 
+              style={{ 
+                left: `${(i * 11) % 94 + 3}%`,
+                width: `${(i % 3 + 1) * 6 + 4}px`,
+                height: `${(i % 3 + 1) * 6 + 4}px`,
+                animationDelay: `${i * 0.6}s`, 
+                animationDuration: `${7 + (i % 6)}s`,
+                opacity: 0
+              }}
             />
           ))}
         </div>
@@ -347,16 +403,17 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
                 onChange={(e) => {
                   const val = e.target.value.toUpperCase();
                   setInputVal(val);
+                  inputValRef.current = val;
                   if (val.length === 2) {
-                    setTimeout(handleCodeSubmit, 50);
+                    setTimeout(() => handleCodeSubmit(val), 50);
                   }
                 }}
                 className={[
                   'w-full rounded-2xl border-2 px-6 py-5 text-center text-4xl font-mono font-black uppercase tracking-[0.5em]',
-                  'bg-black/60 text-white placeholder:text-white/5 outline-none transition-all duration-300 shadow-inner',
+                  'bg-[#1E3A5F]/80 text-white placeholder:text-white/40 outline-none transition-all duration-300 shadow-inner',
                   wrongFlash
-                    ? 'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444]'
-                    : 'border-white/10 focus:border-[#06B6D4]/50 focus:shadow-[0_0_25px_rgba(6,182,212,0.2)]',
+                    ? 'border-[#EF4444] bg-[#EF4444]/20 text-[#EF4444]'
+                    : 'border-white/20 focus:border-[#06B6D4]/50 focus:shadow-[0_0_25px_rgba(6,182,212,0.2)]',
                   locked && 'opacity-40 cursor-not-allowed',
                 ].join(' ')}
               />
@@ -366,9 +423,14 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
             <button
               type="submit"
               disabled={locked || inputVal.length < 2}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#06B6D4] to-[#22C55E] text-[#001f3f] font-black uppercase tracking-[0.2em] shadow-[0_8px_0_#048E9B] hover:translate-y-0.5 active:translate-y-1 transition-all disabled:opacity-20 disabled:grayscale"
+              className={[
+                'w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] transition-all duration-300',
+                inputVal.length < 2 || locked
+                  ? 'bg-white/5 text-white/20 border border-white/10 shadow-none'
+                  : 'bg-gradient-to-r from-[#06B6D4] to-[#22C55E] text-[#001f3f] shadow-[0_8px_0_#048E9B] hover:translate-y-0.5 active:translate-y-1',
+              ].join(' ')}
             >
-              COMMIT KEY
+              {locked ? 'SECURED' : inputVal.length < 2 ? 'TYPE THE CODE' : 'COMMIT KEY'}
             </button>
           </form>
         ) : currentQ?.type === 'timezone' ? (
@@ -395,8 +457,27 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
         ) : null}
       </AnimatedCard>
 
+      {/* Info Card Overlay */}
+      {correctState && (
+        <div 
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-cyan-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={advanceQuestion}
+        >
+          <InfoCard state={correctState} theme="water" accentColor="#06B6D4" />
+          <button className="mt-6 font-bold text-white/70 tracking-widest text-[10px] uppercase border border-white/20 px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all animate-pulse">
+            Tap anywhere to continue
+          </button>
+        </div>
+      )}
+
+      {/* Water Watercolor Accent */}
+      <div 
+        className="watercolor-splash left-[-30px] bottom-[-30px]" 
+        style={{ backgroundImage: `url("${publicAsset('/assets/illustrations/splash-water.png')}")` }} 
+      />
+
       {/* Decoration */}
-      <img src="/assets/illustrations/anchor.svg" className="absolute bottom-6 right-6 w-12 h-12 opacity-10 pointer-events-none grayscale" alt="" />
+      <img src={publicAsset('/assets/illustrations/anchor.svg')} className="absolute bottom-6 right-6 w-12 h-12 opacity-10 pointer-events-none grayscale" alt="" />
     </main>
   );
 }

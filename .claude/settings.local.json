@@ -30,7 +30,12 @@
       "Bash(grep:*)",
       "Bash(npm test:*)",
       "Bash(ls stitch_comprehensive_ui_enhancement \"svg \\(2\\)\" css/retro.css STITCH_UI_BRIEF.md)",
-      "Bash(ls -la /c/Users/anoop/OneDrive/Desktop/AMZ/js/*.js)"
+      "Bash(ls -la /c/Users/anoop/OneDrive/Desktop/AMZ/js/*.js)",
+      "Bash(wc -l app/public/assets/lottie/*.json)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/Atlas-Explorer/)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

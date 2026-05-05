@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameProps, StateEntry } from '@/types';
 import InteractiveMap from '@/components/map/InteractiveMap';
-import { useAudio } from '@/hooks/useAudio';
+import InfoCard from '@/components/ui/InfoCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { useAudio } from '@/hooks/useAudio';
+import { publicAsset } from '@/lib/assets';
+import { useScorePopups } from '@/components/ui/ScorePopup';
+import StateOutline from '@/components/map/StateOutline';
+import { TZ_FILLS } from '@/lib/timezones';
 import {
   pickPinQuestions,
   checkMapClick,
   checkTimezoneClick,
   calculatePoints,
+  isMapQuestion,
   type PinQuestion,
   TOTAL_QUESTIONS,
   TIME_PER_QUESTION,
@@ -37,6 +43,7 @@ function tzBg(tz: string) {
 export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
+  const { triggerScore, ScorePopups } = useScorePopups();
   
   // ── Data ──────────────────────────────────────────────────────────────────
   const [states,    setStates]    = useState<StateEntry[]>([]);
@@ -51,6 +58,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   const [locked,       setLocked]       = useState(false);
   const [correctCode,  setCorrectCode]  = useState<string | null>(null);
   const [wrongCode,    setWrongCode]    = useState<string | null>(null);
+  const [correctState, setCorrectState] = useState<StateEntry | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const startedAtRef    = useRef(0);
@@ -60,10 +68,14 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   const streakRef       = useRef(0);
   const streakPeakRef   = useRef(0);
   const containerRef    = useRef<HTMLDivElement>(null);
+  const scrollRef       = useRef<HTMLDivElement>(null);
+
+  // ── Question tracking ─────────────────────────────────────────────────────
+  const [results, setResults] = useState<Record<number, 'pending' | 'active' | 'found' | 'missed'>>({});
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch('/data/states.json')
+    fetch(publicAsset('/data/states.json'))
       .then((r) => r.json())
       .then((data: StateEntry[]) => {
         setStates(data);
@@ -79,6 +91,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
     setLocked(false);
     setCorrectCode(null);
     setWrongCode(null);
+    setCorrectState(null);
     setTimeLeft(TIME_PER_QUESTION);
     startedAtRef.current = Date.now();
 
@@ -95,6 +108,17 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         return t - 1;
       });
     }, 1000);
+
+    // Update results status
+    setResults(prev => ({ ...prev, [qi]: 'active' }));
+
+    // Scroll active card into view
+    if (scrollRef.current) {
+      const activeCard = scrollRef.current.querySelector(`[data-index="${qi}"]`);
+      if (activeCard) {
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
 
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [qi, loading, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -137,11 +161,24 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
       playSound('correct');
       triggerBurst(null, 'sand-burst');
       if (streakRef.current + 1 >= 3) playSound('streak');
+      
+      // Phase 2: Set correct state to show info card
+      if (q.type === 'map') {
+        setCorrectState(q.state);
+      } else if (clickedCode) {
+        const state = states.find(s => s.code === clickedCode);
+        if (state) setCorrectState(state);
+      }
     } else {
       playSound('wrong');
     }
 
     const pts = calculatePoints(isCorrect, elapsed, SPEED_WINDOW);
+
+    // Trigger score popup
+    if (isCorrect) {
+      triggerScore(window.innerWidth / 2, window.innerHeight / 2, pts);
+    }
 
     scoreRef.current      += pts;
     correctCntRef.current += isCorrect ? 1 : 0;
@@ -150,6 +187,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
     setScore(scoreRef.current);
     setStreak(streakRef.current);
+    setResults(prev => ({ ...prev, [qi]: isCorrect ? 'found' : 'missed' }));
 
     setTimeout(() => {
       const next = qi + 1;
@@ -164,8 +202,16 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
       } else {
         setQi(next);
       }
-    }, 1200);
+    }, isCorrect ? 3000 : 1200);
   }, [locked]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSkip = useCallback(() => {
+    if (locked) return;
+    playSound('click');
+    if (timerRef.current) clearInterval(timerRef.current);
+    pendingClickRef.current = null;
+    setLocked(true);
+  }, [locked, playSound]);
 
   // Handle timeout (timer reaches 0)
   useEffect(() => {
@@ -179,6 +225,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   const currentQ    = questions[qi];
   const timerPct    = (timeLeft / TIME_PER_QUESTION) * 100;
   const timerDanger = timerPct < 30;
+  const timerUrgent = timerPct < 30 && timeLeft > 0 && !locked;
 
   // Build prompt text
   let prompt = '';
@@ -204,7 +251,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
-    <main ref={containerRef} className="flex-1 flex flex-col bg-[#4a3728] p-5 gap-4 overflow-hidden relative">
+    <main ref={containerRef} className="flex-1 flex flex-col bg-[#4a3728] p-3 gap-2 overflow-hidden relative">
       
       {/* Background Video: Desert Expedition */}
       <video
@@ -214,24 +261,30 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         playsInline
         className="absolute inset-0 w-full h-full object-cover opacity-[0.12] pointer-events-none"
       >
-        <source src="/assets/video/desert-bg.mp4" type="video/mp4" />
+        <source src={publicAsset('/assets/video/desert-bg.mp4')} type="video/mp4" />
       </video>
 
       {/* Terrain Pattern Overlay: Dot Grid */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.06]" 
-        style={{ backgroundImage: 'url("/assets/patterns/dots-pattern.png")', backgroundSize: '200px' }} 
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/dots-pattern.png')}")`, backgroundSize: '200px' }} 
       />
+
+      {/* Timer Urgency Vignette */}
+      <div className={`timer-urgency ${timerUrgent ? 'active' : ''}`} />
+
+      {/* Score Popups */}
+      <ScorePopups />
 
       {/* Header row */}
       <div className="flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/30 flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-            <span className="font-black text-[#F59E0B] text-xl">AE</span>
+          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+            <span className="font-black text-white text-xl">AE</span>
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-white font-black text-lg tracking-tight">Pin Rush</span>
-            <span className="text-[#F59E0B] text-[9px] uppercase tracking-[0.3em] font-black">
+            <span className="text-[#E5E7EB] text-[9px] uppercase tracking-[0.3em] font-black opacity-60">
               Desert Expedition
             </span>
           </div>
@@ -245,19 +298,30 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
-            <strong className="text-[#F59E0B] font-mono text-xl leading-none">{streak}x</strong>
+            <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
+              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-white'}`}>
+                {streak}x
+              </strong>
+              {streak >= 5 && (
+                <img 
+                  src={publicAsset('/assets/stickers/fire.gif')} 
+                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none" 
+                  alt="" 
+                />
+              )}
+            </div>
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Objective</span>
-            <strong className="text-white/60 font-mono text-lg leading-none">{qi + 1}/{TOTAL_QUESTIONS}</strong>
+            <strong className="text-white font-mono text-lg leading-none">{qi + 1}/{TOTAL_QUESTIONS}</strong>
           </div>
         </AnimatedCard>
       </div>
 
       {/* Timer Bar Area */}
-      <div className="relative z-10 px-2">
-        <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden shadow-inner border border-white/5">
+      <div className="relative z-10 px-2 flex items-center gap-4">
+        <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden shadow-inner border border-white/5">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${timerDanger ? 'animate-pulse' : ''}`}
             style={{
@@ -269,13 +333,13 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
             }}
           />
         </div>
-        <div className={`absolute top-4 left-1/2 -translate-x-1/2 text-[10px] font-mono font-black tracking-[0.3em] ${timerDanger ? 'text-[#EF4444]' : 'text-white/40'}`}>
-          {timeLeft}S LIMIT
+        <div className={`flex-shrink-0 min-w-[4rem] text-right text-[11px] font-mono font-black tracking-widest ${timerDanger ? 'text-[#EF4444] animate-pulse' : 'text-white/90'}`}>
+          {timeLeft}S
         </div>
       </div>
 
       {/* Map area container */}
-      <div className="relative flex-1 rounded-3xl overflow-hidden border border-white/10 bg-black/50 backdrop-blur-md shadow-2xl mt-4">
+      <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md shadow-2xl mt-1">
         {/* Radar sweep (Golden tint) */}
         <div
           className="absolute inset-0 pointer-events-none z-10 opacity-20"
@@ -288,7 +352,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
         {/* Prompt bubble with animation */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="bg-[#2D3B2F]/90 border border-[#F59E0B]/30 backdrop-blur-xl rounded-2xl px-8 py-4 shadow-[0_15px_40px_rgba(0,0,0,0.5)] animate-in zoom-in duration-300">
+          <div className="bg-[#2D3B2F]/95 border border-[#F59E0B]/50 backdrop-blur-xl rounded-2xl px-8 py-4 shadow-[0_15px_40px_rgba(0,0,0,0.6)] animate-in zoom-in duration-300">
             <span className="text-[#F59E0B] text-[10px] uppercase tracking-[0.3em] font-black block mb-1 text-center">Satellite Target</span>
             <span className="text-white text-xl font-black tracking-tight text-center block">
               {prompt}
@@ -312,13 +376,13 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         )}
 
         {/* Map Rendering */}
-        <div className="absolute inset-0 flex items-center justify-center p-12">
+        <div className="absolute inset-0 flex items-center justify-center p-4">
           <div
             className={[
               'w-full h-full relative z-0 transition-all duration-300',
               locked ? 'opacity-40 grayscale-[0.8] scale-95' : 'opacity-100 scale-100',
-              '[&_.atlas-region]:fill-white/[0.05] [&_.atlas-region]:stroke-white/[0.15]',
-              '[&_.atlas-region:hover]:fill-[#F59E0B]/30 [&_.atlas-region:hover]:stroke-[#F59E0B] [&_.atlas-region:hover]:translate-y-[-2px] transition-all',
+              '[&_.atlas-region]:fill-[#4A6B5B] [&_.atlas-region]:stroke-black/40',
+              '[&_.atlas-region:hover]:fill-[#F59E0B]/40 [&_.atlas-region:hover]:stroke-[#F59E0B] [&_.atlas-region:hover]:translate-y-[-2px] transition-all',
             ].join(' ')}
           >
             <InteractiveMap
@@ -333,14 +397,117 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         </div>
       </div>
 
+      {/* Compact State Card Strip */}
+      <div className="relative z-10 -mx-3 px-3 flex-shrink-0">
+        <div 
+          ref={scrollRef}
+          className="flex gap-2 overflow-x-auto pb-2 pt-1 scrollbar-hide no-scrollbar"
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+          {questions.map((q, index) => {
+            if (!isMapQuestion(q)) return null;
+            const status = results[index] || 'pending';
+            const isActive = index === qi;
+            const isFound = status === 'found';
+            const isMissed = status === 'missed';
+            
+            const fill = isFound 
+              ? TZ_FILLS[q.state.timezone] 
+              : (isActive ? '#F59E0B' : 'rgba(255,255,255,0.15)');
+            
+            const isCA = q.state.country === 'CA';
+
+            return (
+              <div
+                key={index}
+                data-index={index}
+                className={[
+                  'flex-shrink-0 flex items-center gap-2.5 rounded-xl border transition-all duration-300 overflow-hidden relative',
+                  isActive ? 'border-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.25)] bg-white/10 pl-2 pr-3 py-1.5' : 'border-white/5 bg-black/20 px-2.5 py-1.5',
+                  isFound ? 'bg-white/[0.08]' : '',
+                  isMissed ? 'border-red-500/30 grayscale opacity-50' : '',
+                  !isActive && !isFound && !isMissed ? 'opacity-40' : ''
+                ].join(' ')}
+                style={{ 
+                  scrollSnapAlign: 'center',
+                  borderColor: isFound ? `${fill}60` : undefined,
+                }}
+              >
+                {/* Mini State Outline */}
+                <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center relative">
+                  {isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-12 h-12 bg-[#F59E0B]/20 rounded-full blur-lg animate-pulse" />
+                    </div>
+                  )}
+                  <StateOutline 
+                    stateCode={q.state.code} 
+                    className={`w-full h-full transition-all duration-500 ${isActive ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' : ''}`}
+                    fill={fill}
+                    stroke={isFound || isActive ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)'}
+                    strokeWidth={isActive ? 2 : 1.5}
+                  />
+                </div>
+
+                {/* Name & Status */}
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className={`text-[11px] font-black truncate max-w-[90px] ${isActive ? 'text-white' : 'text-white/60'}`}>{q.state.name}</span>
+                  <span className="text-[9px] font-mono text-[#F59E0B] font-bold tracking-wider">{q.state.code}</span>
+                </div>
+
+                {/* Status badge */}
+                {isFound && (
+                  <span 
+                    className="text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter flex-shrink-0"
+                    style={{ backgroundColor: fill }}
+                  >
+                    {q.state.timezone}
+                  </span>
+                )}
+                {isFound && <span className="text-[10px] flex-shrink-0">{isCA ? '🇨🇦' : '🇺🇸'}</span>}
+                {isMissed && <span className="bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase flex-shrink-0">✗</span>}
+                {isActive && (
+                  <button 
+                    onClick={handleSkip}
+                    className="flex-shrink-0 bg-[#F59E0B] hover:bg-[#FFB12B] text-[#2D3B2F] text-[8px] font-black px-3 py-1.5 rounded-lg border-b-2 border-[#B47B00] transition-all uppercase tracking-wider shadow-md active:border-b-0 active:translate-y-0.5"
+                  >
+                    Skip Target
+                  </button>
+                )}
+                {!isActive && !isFound && !isMissed && (
+                  <div className="flex gap-0.5 flex-shrink-0">
+                    <div className="w-1 h-1 rounded-full bg-white/10" />
+                    <div className="w-1 h-1 rounded-full bg-white/10" />
+                    <div className="w-1 h-1 rounded-full bg-white/10" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Info Card Overlay */}
+      {correctState && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-orange-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <InfoCard state={correctState} theme="desert" accentColor="#F59E0B" />
+        </div>
+      )}
+
+      {/* Desert Watercolor Accent */}
+      <div 
+        className="watercolor-splash right-[-50px] top-[-50px]" 
+        style={{ backgroundImage: `url("${publicAsset('/assets/illustrations/splash-desert.png')}")` }} 
+      />
+
       {/* Decoration */}
-      <img src="/assets/illustrations/cactus.svg" className="absolute bottom-8 left-8 w-14 h-14 opacity-15 pointer-events-none grayscale sepia" alt="" />
+      <img src={publicAsset('/assets/illustrations/cactus.svg')} className="absolute bottom-8 left-8 w-14 h-14 opacity-15 pointer-events-none grayscale sepia" alt="" />
       
       <style>{`
         @keyframes pin-radar { 100% { transform: rotate(360deg); } }
         .atlas-region { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        [id^="div"] { display: none !important; }
       `}</style>
     </main>
   );
 }
-

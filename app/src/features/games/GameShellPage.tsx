@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
 import type { GameAttempt, GameState, EarnedBadge, GameResult } from '@/types';
 import { GAME_DEFINITIONS, getTotalScore } from '@/lib/session';
@@ -65,9 +65,14 @@ const GAME_COMPONENTS = [CodeDrop, PinRush, CityStack] as const;
 
 export default function GameShellPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, recordAttemptFull } = useSession();
-
-  const initialGameIndex = session?.currentGameIndex ?? 0;
+  
+  const queryParams = new URLSearchParams(location.search);
+  const paramIndex = queryParams.get('game');
+  
+  const initialGameIndex = paramIndex !== null ? parseInt(paramIndex, 10) : (session?.currentGameIndex ?? 0);
+  
   const [shellState, dispatch] = useReducer(reducer, {
     phase: 'intro',
     gameIndex: initialGameIndex,

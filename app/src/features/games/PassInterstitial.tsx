@@ -1,8 +1,21 @@
-import { useEffect, useRef } from 'react';
-import type { GameAttempt, EarnedBadge } from '@/types';
+import { useEffect, useRef, useState } from 'react';
+import type { GameAttempt, EarnedBadge, StateEntry } from '@/types';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { useAudio } from '@/hooks/useAudio';
+import { publicAsset } from '@/lib/assets';
+
+const CONFETTI_COLORS = ['#FF9900', '#00A8A2', '#FEBD69', '#35D07F', '#F59E0B', '#FFFFFF'];
+
+const CONFETTI = Array.from({ length: 70 }, (_, i) => ({
+  id: i,
+  x: (i * 47) % 100,
+  delay: (i % 18) * 0.09,
+  duration: 2 + (i % 6) * 0.22,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  size: 5 + (i % 5) * 2,
+  isRect: i % 3 !== 0,
+}));
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -67,7 +80,21 @@ export default function PassInterstitial({
   const { playSound } = useAudio();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [randomFact, setRandomFact] = useState<string | null>(null);
+
   useEffect(() => {
+    fetch(publicAsset('/data/states.json'))
+      .then(r => r.json())
+      .then((data: StateEntry[]) => {
+        const stateWithTrivia = data.filter(s => s.trivia && s.trivia.length > 0);
+        if (stateWithTrivia.length > 0) {
+          const s = stateWithTrivia[Math.floor(Math.random() * stateWithTrivia.length)];
+          if (s.trivia && s.trivia.length > 0) {
+            setRandomFact(s.trivia[Math.floor(Math.random() * s.trivia.length)]);
+          }
+        }
+      });
+
     playSound('correct');
     const timer = setTimeout(() => {
       triggerBurst(null, 'leaf-spark', { count: 40, spread: 250 });
@@ -76,13 +103,31 @@ export default function PassInterstitial({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main ref={containerRef} className="flex-1 flex flex-col items-center justify-center gap-8 p-12 text-center relative overflow-hidden bg-[#2D3B2F]">
+    <main ref={containerRef} className="flex-1 flex flex-col items-center justify-start md:justify-center gap-8 p-6 md:p-12 text-center relative overflow-y-auto custom-scrollbar bg-[#2D3B2F]">
 
       {/* Terrain Pattern */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.05]" 
-        style={{ backgroundImage: 'url("/assets/patterns/dots-pattern.png")', backgroundSize: '120px' }} 
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/dots-pattern.png')}")`, backgroundSize: '120px' }} 
       />
+
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+        {CONFETTI.map((piece) => (
+          <span
+            key={piece.id}
+            className="absolute top-[-12px]"
+            style={{
+              left: `${piece.x}%`,
+              width: piece.size,
+              height: piece.isRect ? piece.size * 0.5 : piece.size,
+              backgroundColor: piece.color,
+              borderRadius: piece.isRect ? 2 : '50%',
+              opacity: 0.85,
+              animation: `confettiFall ${piece.duration}s ${piece.delay}s ease-in forwards`,
+            }}
+          />
+        ))}
+      </div>
 
       <div className="relative z-10 flex flex-col items-center gap-2">
         <span className="text-[#10B981] text-[10px] font-black uppercase tracking-[0.4em] drop-shadow-md">
@@ -93,11 +138,11 @@ export default function PassInterstitial({
         </h1>
       </div>
 
-      <AnimatedCard tiltAmount={4} className="bg-black/40 backdrop-blur-xl border border-white/10 p-10 rounded-[40px] shadow-2xl relative group overflow-hidden">
+      <AnimatedCard tiltAmount={4} className="flex-shrink-0 bg-black/40 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-[40px] shadow-2xl relative group overflow-hidden paper-texture">
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50" />
         
         <div className="relative z-10 flex flex-col items-center gap-2">
-          <div className="text-8xl font-black text-[#F59E0B] tabular-nums tracking-tighter drop-shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+          <div className="text-7xl md:text-8xl font-black text-[#F59E0B] tabular-nums tracking-tighter drop-shadow-[0_0_30px_rgba(245,158,11,0.3)]">
             <AnimatedScore target={attempt.score} />
           </div>
           <div className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">
@@ -120,6 +165,19 @@ export default function PassInterstitial({
         </div>
       </AnimatedCard>
 
+      {/* Fun Fact Section */}
+      {randomFact && (
+        <div className="relative z-10 max-w-md bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-700 delay-500">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-xl">💡</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#F59E0B]">Explorer Tip</span>
+          </div>
+          <p className="text-white/80 text-sm leading-relaxed font-medium italic">
+            "{randomFact}"
+          </p>
+        </div>
+      )}
+
       {/* Badges */}
       {newBadges.length > 0 && (
         <div className="relative z-10 flex flex-col gap-2">
@@ -137,7 +195,7 @@ export default function PassInterstitial({
       {/* CTA */}
       <button
         onClick={onContinue}
-        className="relative z-10 bg-[#F59E0B] hover:bg-[#FFB12B] text-[#2D3B2F] font-black px-16 py-5 rounded-2xl text-xl transition-all shadow-[0_10px_0_#D97706] hover:translate-y-0.5 active:translate-y-1 active:shadow-[0_4px_0_#D97706] uppercase tracking-[0.2em] mt-4"
+        className="relative z-10 btn-chunky btn-chunky-orange px-16 py-5 text-xl mt-4 mb-2 flex-shrink-0"
       >
         {isFinalMission ? 'Mission Log' : 'Next Sector'}
       </button>

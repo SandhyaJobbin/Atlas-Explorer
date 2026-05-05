@@ -17,12 +17,22 @@ function TrainingGuard({ children }: { children: React.ReactElement }) {
 
 function PlayGuard({ children }: { children: React.ReactElement }) {
   const raw = globalThis.localStorage?.getItem('atlas-explorer-session');
-  if (!raw) return <Navigate to="/" replace />;
+  
+  // Allow bypass if game or debug param is present in the hash/search
+  const hasOverride = window.location.hash.includes('game=') || window.location.hash.includes('debug=');
+  
+  if (!raw) {
+    if (hasOverride) return children; // Allow proceeding to let GameShell/Session handle missing session
+    return <Navigate to="/" replace />;
+  }
+
   try {
     const session = JSON.parse(raw);
-    if (!session?.training?.completed) return <Navigate to="/train/map" replace />;
+    if (!session?.training?.completed && !hasOverride) {
+      return <Navigate to="/train/map" replace />;
+    }
   } catch {
-    return <Navigate to="/" replace />;
+    if (!hasOverride) return <Navigate to="/" replace />;
   }
   return children;
 }

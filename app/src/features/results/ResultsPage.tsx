@@ -6,6 +6,7 @@ import { useParticles } from '@/components/ui/ParticleSystem';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import AppLayout from '@/components/layout/AppLayout';
+import { publicAsset } from '@/lib/assets';
 import { BADGE_DEFS } from '@/lib/badges';
 import { fetchLeaderboard } from '@/lib/leaderboard';
 import { GAME_DEFINITIONS, getTotalScore, getTotalStars, isAllPassed } from '@/lib/session';
@@ -169,13 +170,13 @@ export default function ResultsPage() {
         {/* Playful Cartography Background: Journal Texture */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.15] mix-blend-overlay" 
-          style={{ backgroundImage: 'url("/assets/patterns/paper-grain.png")', backgroundSize: '600px' }} 
+          style={{ backgroundImage: `url("${publicAsset('/assets/patterns/paper-grain.png')}")`, backgroundSize: '600px' }} 
         />
         
         {/* Terrain Pattern */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.04]" 
-          style={{ backgroundImage: 'url("/assets/patterns/dots-pattern.png")', backgroundSize: '150px' }} 
+          style={{ backgroundImage: `url("${publicAsset('/assets/patterns/dots-pattern.png')}")`, backgroundSize: '150px' }} 
         />
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -211,11 +212,11 @@ export default function ResultsPage() {
             { label: 'Intelligence', value: totalScore,   accent: '#06B6D4' },
             { label: 'Merit Stars',  value: totalStars,   accent: '#F59E0B' },
             { label: 'Sorties',      value: levelsPassed, accent: '#10B981' },
-          ].map((item) => (
+          ].map((item, idx) => (
             <AnimatedCard
               key={item.label}
               tiltAmount={4}
-              className="flex flex-col items-center gap-1 p-5 rounded-3xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-xl relative overflow-hidden group"
+              className={`flex flex-col items-center gap-1 p-5 rounded-3xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-xl relative overflow-hidden group slide-up ${idx === 0 ? 'stagger-1' : idx === 1 ? 'stagger-2' : 'stagger-3'}`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="text-[9px] uppercase tracking-[0.2em] font-black text-white/40 mb-1">{item.label}</span>
@@ -239,7 +240,7 @@ export default function ResultsPage() {
               >
                 {game.passed && (
                   <div className="absolute top-0 right-0 p-4 opacity-[0.03] grayscale pointer-events-none group-hover:opacity-10 transition-opacity">
-                    <img src="/assets/illustrations/compass-rose.svg" className="w-24 h-24" alt="" />
+                    <img src={publicAsset('/assets/illustrations/compass-rose.svg')} className="w-24 h-24" alt="" />
                   </div>
                 )}
                 

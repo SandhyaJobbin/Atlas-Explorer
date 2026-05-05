@@ -23,6 +23,7 @@ export interface StateEntry {
   timezoneLabel: TimezoneLabel;
   coast: Coast;
   specialties: string[];
+  trivia?: string[];
 }
 
 // ─── Training ────────────────────────────────────────────────────────────────

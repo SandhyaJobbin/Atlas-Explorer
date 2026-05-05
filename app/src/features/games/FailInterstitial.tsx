@@ -4,6 +4,7 @@ import { getMotivationalCopy, hasPersonalBest, getAttemptDots } from '@/lib/flow
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { useAudio } from '@/hooks/useAudio';
+import { publicAsset } from '@/lib/assets';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ function RetryButton({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       disabled={seconds > 0}
-      className="relative z-10 bg-[#FF6577] hover:bg-[#F87171] disabled:opacity-40 disabled:cursor-not-allowed text-[#232F3E] font-black px-16 py-5 rounded-2xl text-xl transition-all shadow-[0_10px_0_#991B1B] hover:translate-y-0.5 active:translate-y-1 active:shadow-[0_4px_0_#991B1B] uppercase tracking-[0.2em]"
+      className={`relative z-10 btn-chunky px-16 py-5 text-xl transition-all uppercase tracking-[0.2em] ${seconds > 0 ? 'opacity-40 cursor-not-allowed bg-gray-500 text-white' : 'btn-chunky-orange'}`}
     >
       {seconds > 0 ? `SYNCING... (${seconds})` : 'INITIATE RETRY'}
     </button>
@@ -78,7 +79,7 @@ export default function FailInterstitial({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center gap-8 p-12 text-center relative overflow-hidden bg-[#2D2A2F]">
+    <main className="flex-1 flex flex-col items-center justify-start md:justify-center gap-8 p-6 md:p-12 text-center relative overflow-y-auto custom-scrollbar bg-[#2D2A2F]">
 
       {/* Reddish Glitchy Background */}
       <div className="absolute inset-0 bg-[#FF6577]/5 animate-pulse pointer-events-none" />
@@ -86,7 +87,7 @@ export default function FailInterstitial({
       {/* Terrain Pattern */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.05] grayscale sepia" 
-        style={{ backgroundImage: 'url("/assets/patterns/dots-pattern.png")', backgroundSize: '120px' }} 
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/dots-pattern.png')}")`, backgroundSize: '120px' }} 
       />
 
       <div className="relative z-10 flex flex-col items-center gap-2">
@@ -98,7 +99,7 @@ export default function FailInterstitial({
         </h1>
       </div>
 
-      <AnimatedCard tiltAmount={4} className="bg-black/60 backdrop-blur-xl border border-white/10 p-10 rounded-[40px] shadow-2xl relative group overflow-hidden border-t-[#FF6577]/30">
+      <AnimatedCard tiltAmount={4} className="flex-shrink-0 bg-black/60 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-[40px] shadow-2xl relative group overflow-hidden border-t-[#FF6577]/30 paper-texture">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-50" />
         
         <div className="relative z-10 flex flex-col items-center gap-2 mb-6">

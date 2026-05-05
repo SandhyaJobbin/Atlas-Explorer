@@ -6,6 +6,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { BADGE_DEFS } from '@/lib/badges';
+import { publicAsset } from '@/lib/assets';
 import { GAME_DEFINITIONS } from '@/lib/session';
 
 // ─── Badge icon emojis (landing preview) ─────────────────────────────────────
@@ -164,7 +165,7 @@ export default function LandingPage() {
           playsInline
           className="absolute inset-0 w-full h-full object-cover opacity-[0.05] pointer-events-none z-0"
         >
-          <source src="/assets/video/paper-bg.mp4" type="video/mp4" />
+          <source src={publicAsset('/assets/video/paper-bg.mp4')} type="video/mp4" />
         </video>
 
         {/* ── Left Panel: Entry/Form ────────────────────────────────────── */}
@@ -176,14 +177,14 @@ export default function LandingPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-black text-[#232F3E] leading-tight">Atlas Explorer</h1>
-                <p className="text-[#2D3B2F]/40 text-xs font-bold uppercase tracking-widest">Geo Rush · iCube</p>
+                <p className="text-[#2D3B2F]/60 text-[13px] font-bold uppercase tracking-[0.15em]">Geo Rush · iCube</p>
               </div>
             </div>
 
             <h2 className="text-3xl font-black text-[#232F3E] mb-3 leading-tight">
               Initialize<br />Expedition
             </h2>
-            <p className="text-[#2D3B2F]/60 text-sm max-w-xs">
+            <p className="text-[#2D3B2F]/60 text-sm max-w-xs mb-10">
               Welcome, Agent. Master the <strong className="text-[#232F3E]">Learning Zone</strong> to unlock access to the <strong className="text-[#232F3E]">3 tactical simulations</strong>.
             </p>
           </div>
@@ -239,11 +240,11 @@ export default function LandingPage() {
                 </button>
               </AnimatedCard>
             ) : (
-              <form onSubmit={handleStart} className="flex flex-col gap-6">
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="agent-name" className="text-[#2D3B2F]/60 text-[10px] uppercase tracking-widest font-black">
-                      Player Tag
+              <form onSubmit={handleStart} className="flex flex-col gap-8">
+                <div className="space-y-7">
+                  <div className="flex flex-col gap-4">
+                    <label htmlFor="agent-name" className="text-[#2D3B2F]/60 text-[11px] uppercase tracking-[0.2em] font-extrabold flex items-center gap-1">
+                      Player Tag <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
                       id="agent-name"
@@ -253,13 +254,13 @@ export default function LandingPage() {
                       placeholder="e.g. Maverick"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="border-2 border-[#2D3B2F]/5 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold"
+                      className="border border-[#2D3B2F]/20 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold shadow-sm"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="wave-code" className="text-[#2D3B2F]/60 text-[10px] uppercase tracking-widest font-black">
-                      Wave Code
+                  <div className="flex flex-col gap-4">
+                    <label htmlFor="wave-code" className="text-[#2D3B2F]/60 text-[11px] uppercase tracking-[0.2em] font-extrabold flex items-center gap-1">
+                      Wave Code <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
                       id="wave-code"
@@ -269,13 +270,13 @@ export default function LandingPage() {
                       placeholder="e.g. WAVE-24"
                       value={waveCode}
                       onChange={(e) => setWaveCode(e.target.value)}
-                      className="border-2 border-[#2D3B2F]/5 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold"
+                      className="border border-[#2D3B2F]/20 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold shadow-sm"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="trainer-name" className="text-[#2D3B2F]/60 text-[10px] uppercase tracking-widest font-black">
-                      Lead Trainer
+                  <div className="flex flex-col gap-4">
+                    <label htmlFor="trainer-name" className="text-[#2D3B2F]/60 text-[11px] uppercase tracking-[0.2em] font-extrabold flex items-center gap-1">
+                      Lead Trainer <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
                       id="trainer-name"
@@ -285,12 +286,12 @@ export default function LandingPage() {
                       placeholder="e.g. Sarah J."
                       value={trainerName}
                       onChange={(e) => setTrainerName(e.target.value)}
-                      className="border-2 border-[#2D3B2F]/5 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold"
+                      className="border border-[#2D3B2F]/20 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold shadow-sm"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 pt-2">
+                <div className="flex flex-col gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={!formValid}
@@ -320,43 +321,50 @@ export default function LandingPage() {
           />
 
           <div className="relative z-10 h-full flex flex-col">
-            <div className="flex justify-between items-start mb-12">
-              <div className="space-y-4">
-                <p className="text-[#FF9900] text-xs font-black uppercase tracking-[0.3em]">Operational Readiness</p>
-                <div className="flex gap-8">
-                  {[
-                    { val: '01', label: 'Learning Zone' },
-                    { val: '03', label: 'Tactical Sims' },
-                    { val: '70%', label: 'Min Accuracy' },
-                  ].map(item => (
-                    <div key={item.label}>
-                      <p className="text-3xl font-black text-white leading-none">{item.val}</p>
-                      <p className="text-white/30 text-[9px] uppercase tracking-wider mt-1">{item.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex justify-end items-start mb-12 opacity-10">
               <LottiePlayer 
-                src="assets/lottie/globe.json" 
+                src={publicAsset('assets/lottie/globe.json')} 
                 className="w-32 h-32 -mt-4 drop-shadow-2xl"
               />
             </div>
 
-            <div className="flex-1 flex flex-col justify-center gap-8 lg:gap-12 py-8">
+            <div className="flex-1 flex flex-col justify-center gap-12 lg:gap-20 py-12">
               <div className="max-w-md">
                 <h2 className="text-4xl lg:text-5xl font-black text-white mb-4 lg:mb-6 leading-[1.1]">
                   Tap fast, stack streaks,<br />
                   <span className="text-[#FF9900]">own the map.</span>
                 </h2>
-                <p className="text-white/50 text-lg leading-relaxed">
+                <p className="text-white/50 text-lg leading-relaxed mb-10">
                   Complete the <strong className="text-[#FF9900]">prerequisite zone</strong> to prove your readiness for the <strong className="text-white">3 high-stakes simulations</strong> in the North America sector.
                 </p>
+
+                {/* Relocated and reduced prominence stats panel (Issue 1.1) */}
+                <div className="space-y-4 pt-8 border-t border-white/10">
+                  <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.15em]">Operational Readiness</p>
+                  <div className="flex gap-10">
+                    {[
+                      { val: '01', label: 'Learning Zone' },
+                      { val: '03', label: 'Tactical Sims' },
+                      { val: '70%', label: 'Min Accuracy' },
+                    ].map(item => (
+                      <div key={item.label}>
+                        <p className="text-xl font-black text-white/80 leading-none">{item.val}</p>
+                        <p className="text-white/20 text-[9px] uppercase tracking-wider mt-1.5">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {STEPS.map((step) => (
                   <AnimatedCard key={step.num} tiltAmount={4} className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md relative group overflow-hidden">
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[8px] font-black uppercase tracking-widest text-white/30 rounded-bl-xl border-l border-b border-white/5">
+                    <div className={[
+                      "absolute top-4 right-4 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg",
+                      step.tag === 'Train' 
+                        ? "bg-[#00A8A2] text-white" 
+                        : "bg-[#FF9900] text-[#232F3E]"
+                    ].join(' ')}>
                       {step.tag}
                     </div>
                     <div className={[

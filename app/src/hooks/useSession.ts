@@ -64,8 +64,18 @@ export function useSessionState(): SessionContextValue {
 
   // Persist on every session change
   useEffect(() => {
-    if (session) libSaveSession(session);
-  }, [session]);
+    if (session) {
+      libSaveSession(session);
+    } else {
+      // Auto-create demo session if debug/game override is present
+      const hasOverride = window.location.hash.includes('game=') || window.location.hash.includes('debug=');
+      if (hasOverride) {
+        const s = libCreateDemoSession();
+        libSaveSession(s);
+        setSession(s);
+      }
+    }
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createNewSession = useCallback(
     (name: string, waveCode: string, trainerName: string) => {

@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameProps } from '@/types';
+import type { GameProps, StateEntry } from '@/types';
 import { useAudio } from '@/hooks/useAudio';
+import InfoCard from '@/components/ui/InfoCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { publicAsset } from '@/lib/assets';
+import { useScorePopups } from '@/components/ui/ScorePopup';
 import {
   buildRounds,
   isCorrectPlacement,
@@ -24,9 +27,11 @@ type CardStatus = 'idle' | 'correct' | 'wrong';
 export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
+  const { triggerScore, ScorePopups } = useScorePopups();
   
   // ── Data ──────────────────────────────────────────────────────────────────
   const [rounds,  setRounds]  = useState<Round[]>([]);
+  const [states,  setStates]  = useState<StateEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Game state ────────────────────────────────────────────────────────────
@@ -38,6 +43,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
   const [placed,       setPlaced]       = useState<Set<string>>(new Set());
   const [cardStatus,   setCardStatus]   = useState<Record<string, CardStatus>>({});
   const [bucketPlaced, setBucketPlaced] = useState<Record<string, CityWithId[]>>({});
+  const [correctState, setCorrectState] = useState<StateEntry | null>(null);
   const [_finished,    setFinished]     = useState(false);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
@@ -54,12 +60,14 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch('/data/cities.json')
-      .then((r) => r.json())
-      .then((data) => {
-        setRounds(buildRounds(data));
-        setLoading(false);
-      });
+    Promise.all([
+      fetch(publicAsset('/data/cities.json')).then((r) => r.json()),
+      fetch(publicAsset('/data/states.json')).then((r) => r.json()),
+    ]).then(([cityData, stateData]) => {
+      setRounds(buildRounds(cityData));
+      setStates(stateData);
+      setLoading(false);
+    });
   }, []);
 
   // ── Start each round ──────────────────────────────────────────────────────
@@ -73,6 +81,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
     setPlaced(new Set());
     setCardStatus({});
     setBucketPlaced({});
+    setCorrectState(null);
     setFinished(false);
     setTimeLeft(TIME_PER_ROUND);
 
@@ -110,6 +119,12 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
 
     correctCntRef.current += correctInRound;
     scoreRef.current      += correctInRound * (10 + (speedBonus ? 3 : 0));
+    
+    // Trigger score popup in center for round completion if all correct
+    if (correctInRound >= BUCKETS_PER_ROUND * CITIES_PER_BUCKET) {
+      triggerScore(window.innerWidth / 2, window.innerHeight / 2, correctInRound * 10);
+    }
+
     setScore(scoreRef.current);
     setStreak(streakRef.current);
 
@@ -160,13 +175,27 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
       playSound('correct');
       triggerBurst(null, 'leaf-spark');
       
+      // Trigger score popup for individual correct placement
+      const rect = e.currentTarget.getBoundingClientRect();
+      triggerScore(rect.left + rect.width / 2, rect.top, 10);
+
       placedRef.current.add(cityId);
       setPlaced(new Set(placedRef.current));
       setCardStatus((prev) => ({ ...prev, [cityId]: 'correct' }));
-      setBucketPlaced((prev) => ({
-        ...prev,
-        [stateCode]: [...(prev[stateCode] ?? []), city],
-      }));
+      const newBucketPlaced = {
+        ...bucketPlaced,
+        [stateCode]: [...(bucketPlaced[stateCode] ?? []), city],
+      };
+      setBucketPlaced(newBucketPlaced);
+
+      // Check if bucket is now full
+      if (newBucketPlaced[stateCode].length === CITIES_PER_BUCKET) {
+        const stateInfo = states.find(s => s.code === stateCode);
+        if (stateInfo) {
+          setCorrectState(stateInfo);
+          setTimeout(() => setCorrectState(null), 2500);
+        }
+      }
 
       streakRef.current += 1;
       if (streakRef.current >= 3) playSound('streak');
@@ -196,6 +225,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
   const currentRound = rounds[ri];
   const timerPct     = (timeLeft / TIME_PER_ROUND) * 100;
   const timerDanger  = timerPct < 30;
+  const timerUrgent  = timerPct < 30 && timeLeft > 0;
 
   // Cities still in the tray (not placed)
   const trayCities   = currentRound?.cities.filter((c) => !placed.has(c.id)) ?? [];
@@ -224,14 +254,20 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
         playsInline
         className="absolute inset-0 w-full h-full object-cover opacity-[0.2] pointer-events-none"
       >
-        <source src="/assets/video/forest-bg.mp4" type="video/mp4" />
+        <source src={publicAsset('/assets/video/forest-bg.mp4')} type="video/mp4" />
       </video>
 
       {/* Terrain Pattern: Topo Map */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.1]" 
-        style={{ backgroundImage: 'url("/assets/patterns/topo-pattern.png")', backgroundSize: '400px' }} 
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/topo-pattern.png')}")`, backgroundSize: '400px' }} 
       />
+
+      {/* Timer Urgency Vignette */}
+      <div className={`timer-urgency ${timerUrgent ? 'active' : ''}`} />
+
+      {/* Score Popups */}
+      <ScorePopups />
 
       {/* Header row */}
       <div className="flex items-center justify-between relative z-10">
@@ -255,7 +291,18 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
-            <strong className="text-[#10B981] font-mono text-xl leading-none">{streak}x</strong>
+            <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
+              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-[#10B981]'}`}>
+                {streak}x
+              </strong>
+              {streak >= 5 && (
+                <img 
+                  src={publicAsset('/assets/stickers/fire.gif')} 
+                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none" 
+                  alt="" 
+                />
+              )}
+            </div>
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
@@ -314,8 +361,21 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
         ))}
       </div>
 
+      {/* Info Card Overlay (shown when bucket is filled) */}
+      {correctState && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-emerald-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <InfoCard state={correctState} theme="forest" accentColor="#10B981" />
+        </div>
+      )}
+
+      {/* Forest Watercolor Accent */}
+      <div 
+        className="watercolor-splash left-[-40px] top-[-40px]" 
+        style={{ backgroundImage: `url("${publicAsset('/assets/illustrations/splash-forest.png')}")` }} 
+      />
+
       {/* Decoration */}
-      <img src="/assets/illustrations/pine-tree.svg" className="absolute bottom-8 right-8 w-14 h-14 opacity-15 pointer-events-none grayscale sepia" alt="" />
+      <img src={publicAsset('/assets/illustrations/pine-tree.svg')} className="absolute bottom-8 right-8 w-14 h-14 opacity-15 pointer-events-none grayscale sepia" alt="" />
     </main>
   );
 }
@@ -345,9 +405,9 @@ function CityCard({
           : 'bg-white/[0.08] border-white/20 text-white hover:border-[#10B981] hover:bg-white/[0.12] active:cursor-grabbing hover:-translate-y-1',
       ].join(' ')}
       style={{
-        maskImage: 'url("/assets/illustrations/torn-edge.png")',
+        maskImage: `url("${publicAsset('/assets/illustrations/torn-edge.png')}")`,
         maskSize: '100% 100%',
-        WebkitMaskImage: 'url("/assets/illustrations/torn-edge.png")',
+        WebkitMaskImage: `url("${publicAsset('/assets/illustrations/torn-edge.png')}")`,
         WebkitMaskSize: '100% 100%'
       }}
     >

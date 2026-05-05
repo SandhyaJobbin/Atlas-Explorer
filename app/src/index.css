@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: 'Nunito';
-  src: url('/assets/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');
+  src: url('/Atlas-Explorer/assets/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');
   font-weight: 200 1000;
   font-style: normal;
   font-display: swap;
@@ -10,7 +10,7 @@
 
 @font-face {
   font-family: 'Nunito';
-  src: url('/assets/Nunito/Nunito-Italic-VariableFont_wght.ttf') format('truetype');
+  src: url('/Atlas-Explorer/assets/Nunito/Nunito-Italic-VariableFont_wght.ttf') format('truetype');
   font-weight: 200 1000;
   font-style: italic;
   font-display: swap;
@@ -52,7 +52,8 @@
 
 :root {
   --geo-dot-pattern: radial-gradient(circle, rgba(45, 59, 47, 0.12) 1px, transparent 1.3px);
-  --geo-topo-pattern: url('/assets/topo-pattern.svg');
+  --geo-topo-pattern: url('/Atlas-Explorer/assets/topo-pattern.svg');
+  --paper-grain: url('/Atlas-Explorer/assets/patterns/paper-grain.png');
 }
 
 * {
@@ -87,6 +88,67 @@ h1, h2, h3, .font-display {
 .glass-blur-sm { backdrop-filter: blur(4px); }
 .glass-blur-md { backdrop-filter: blur(8px); }
 .glass-blur-lg { backdrop-filter: blur(10px); }
+
+/* Phase 2: Visual Polish */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--paper-grain);
+  background-size: 300px;
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.btn-chunky {
+  position: relative;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.btn-chunky:active {
+  transform: translateY(4px);
+}
+
+.btn-chunky-primary {
+  background-color: var(--color-amz-teal);
+  color: white;
+  box-shadow: 0 8px 0 #007B76;
+}
+
+.btn-chunky-primary:active {
+  box-shadow: 0 2px 0 #007B76;
+}
+
+.btn-chunky-orange {
+  background-color: var(--color-amz-orange);
+  color: white;
+  box-shadow: 0 8px 0 #cc7a00;
+}
+
+.btn-chunky-orange:active {
+  box-shadow: 0 2px 0 #cc7a00;
+}
+
+.watercolor-splash {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.15;
+  width: 300px;
+  height: 300px;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
 
 /* Animations */
 @keyframes fadeIn {
@@ -170,6 +232,75 @@ h1, h2, h3, .font-display {
   46%  { transform: translateX(0); }
   56%  { transform: translateX(0); }
   100% { transform: translateX(105%); }
+}
+
+@keyframes scoreFloat {
+  0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+  20%  { transform: translateY(-20px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-60px) scale(1); opacity: 0; }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.8); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); opacity: 1; }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.animate-score-float { animation: scoreFloat 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+.animate-pop-in { animation: popIn 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+.animate-slide-up { animation: slideUpFade 0.5s ease-out forwards; }
+.animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+
+@keyframes bubble-rise {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  15% { opacity: 0.7; }
+  50% { opacity: 0.5; transform: translateY(-100px) scale(1.1) translateX(10px); }
+  100% { transform: translateY(-250px) scale(1.3) translateX(-10px); opacity: 0; }
+}
+
+.animate-bubble-rise {
+  animation: bubble-rise linear infinite;
+}
+
+.pop-in { animation: popIn 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; opacity: 0; }
+.slide-up { animation: slideUpFade 0.5s ease-out forwards; opacity: 0; }
+.bounce-in { animation: bounceIn 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; opacity: 0; }
+
+.stagger-1 { animation-delay: 100ms; }
+.stagger-2 { animation-delay: 200ms; }
+.stagger-3 { animation-delay: 300ms; }
+.stagger-4 { animation-delay: 400ms; }
+
+/* Timer Urgency Vignette */
+.timer-urgency {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: inset 0 0 100px rgba(239, 68, 68, 0);
+  transition: box-shadow 0.5s ease;
+}
+
+.timer-urgency.active {
+  box-shadow: inset 0 0 150px rgba(239, 68, 68, 0.3);
+  animation: pulseVignette 1s ease infinite alternate;
+}
+
+@keyframes pulseVignette {
+  from { box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.2); }
+  to   { box-shadow: inset 0 0 200px rgba(239, 68, 68, 0.4); }
 }
 
 /* Legacy Confetti Fall (kept from existing index.css) */
@@ -297,4 +428,20 @@ h1, h2, h3, .font-display {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 153, 0, 0.4);
+}
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+
+  .confetti-container, .confetti-piece {
+    display: none !important;
+  }
 }
