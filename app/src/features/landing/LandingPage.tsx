@@ -39,7 +39,7 @@ const STEPS = [
   { num: '01', label: 'Map Explorer',  desc: 'Click every state and province on the live SVG map',  tag: 'Train' },
   { num: '02', label: 'Code Drop',     desc: 'Catch the right state code before the block lands',   tag: 'Play'  },
   { num: '03', label: 'Pin Rush',      desc: 'Tap the right target while the map is live',          tag: 'Play'  },
-  { num: '04', label: 'City Stack',    desc: 'Drag city cards into the right zone for combo points', tag: 'Play'  },
+  { num: '04', label: 'Tz Sorter',      desc: 'Drag states & provinces into the right timezone zone for combo points', tag: 'Play'  },
 ];
 
 // ─── BadgeShelfModal ──────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ function BadgeShelfModal({
                     : 'border-white/6 bg-white/3 opacity-40 grayscale scale-95',
                 ].join(' ')}
               >
-                <span className="text-2xl leading-none mt-0.5 select-none">
+                <span className="text-2xl leading-none mt-0.5 select-none" aria-hidden="true">
                   {BADGE_ICONS[badge.id] ?? '⭐'}
                 </span>
                 <div className="min-w-0">
@@ -144,6 +144,9 @@ export default function LandingPage() {
     if (session.completed) {
       navigate('/play/results');
     } else if (session.training.completed) {
+      if (session.currentGameIndex === undefined || session.currentGameIndex === null) {
+        session.currentGameIndex = 0;
+      }
       navigate('/play');
     } else {
       navigate('/train/map');
@@ -155,37 +158,29 @@ export default function LandingPage() {
 
   return (
     <AppLayout>
-      <main className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-[#F5F0E8] relative">
+      <main className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-[#0c120e] relative">
         
-        {/* Global Background Video */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.05] pointer-events-none z-0"
-        >
-          <source src={publicAsset('/assets/video/paper-bg.mp4')} type="video/mp4" />
-        </video>
+        {/* Background Grain: Handled by .paper-texture overlay in AppLayout/Index.css if applicable,
+            otherwise we rely on the clean dark surface for performance. */}
 
         {/* ── Left Panel: Entry/Form ────────────────────────────────────── */}
-        <section className="relative z-10 w-full lg:w-[450px] flex-shrink-0 flex flex-col p-6 lg:p-12 overflow-y-auto lg:overflow-visible border-r border-[#2D3B2F]/5 bg-[#F5F0E8]/80 backdrop-blur-sm">
+        <section className="relative z-10 w-full lg:w-[450px] flex-shrink-0 flex flex-col p-6 lg:p-12 overflow-y-auto lg:overflow-visible border-r border-white/5 bg-[#0c120e]/95 backdrop-blur-md">
           <div className="mb-10">
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 rounded-2xl bg-[#FF9900] flex items-center justify-center text-[#232F3E] font-extrabold text-xl shadow-[0_8px_0_#CC7A00] transform hover:translate-y-0.5 active:translate-y-1 transition-all">
                 AE
               </div>
               <div>
-                <h1 className="text-2xl font-black text-[#232F3E] leading-tight">Atlas Explorer</h1>
-                <p className="text-[#2D3B2F]/60 text-[13px] font-bold uppercase tracking-[0.15em]">Geo Rush · iCube</p>
+                <h1 className="text-2xl font-black text-white leading-tight">Atlas Explorer</h1>
+                <p className="text-[#FF9900] text-[13px] font-bold uppercase tracking-wider opacity-80">Geo Rush · iCube</p>
               </div>
             </div>
 
-            <h2 className="text-3xl font-black text-[#232F3E] mb-3 leading-tight">
+            <h2 className="text-3xl font-black text-white mb-3 leading-tight">
               Initialize<br />Expedition
             </h2>
-            <p className="text-[#2D3B2F]/60 text-sm max-w-xs mb-10">
-              Welcome, Agent. Master the <strong className="text-[#232F3E]">Learning Zone</strong> to unlock access to the <strong className="text-[#232F3E]">3 tactical simulations</strong>.
+            <p className="text-white/60 text-sm max-w-xs mb-10">
+              Welcome, Agent. Master the <strong className="text-[#FF9900]">Learning Zone</strong> to unlock access to the <strong className="text-[#FF9900]">3 tactical simulations</strong>.
             </p>
           </div>
 
@@ -196,7 +191,7 @@ export default function LandingPage() {
                   <LottiePlayer src="assets/lottie/level-up.json" className="w-24 h-24" />
                 </div>
                 
-                <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold mb-2">Active Session</p>
+                <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold mb-2">Active Session</p>
                 <p className="font-black text-[#FEBD69] text-3xl mb-6">{session.name}</p>
 
                 <button
@@ -206,19 +201,19 @@ export default function LandingPage() {
                 >
                   <div className="flex -space-x-2">
                     {previewIcons.map((id) => (
-                      <div key={id} className="w-10 h-10 rounded-full bg-[#1a2233] border-2 border-[#232F3E] flex items-center justify-center text-xl shadow-lg">
+                      <div key={id} className="w-10 h-10 rounded-full bg-[#1a2233] border-2 border-[#232F3E] flex items-center justify-center text-xl shadow-lg" aria-hidden="true">
                         {BADGE_ICONS[id] ?? '⭐'}
                       </div>
                     ))}
                     {earnedBadges.length === 0 && (
-                      <div className="w-10 h-10 rounded-full bg-[#1a2233] border-2 border-[#232F3E] flex items-center justify-center text-xl opacity-40">
+                      <div className="w-10 h-10 rounded-full bg-[#1a2233] border-2 border-[#232F3E] flex items-center justify-center text-xl opacity-40" aria-hidden="true">
                         🏅
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <strong className="text-sm text-white group-hover:text-[#FF9900] transition-colors">Badge Shelf</strong>
-                    <p className="text-white/40 text-[10px] uppercase tracking-wider">{earnedBadges.length}/{BADGE_DEFS.length} discovered</p>
+                    <p className="text-white/40 text-[10px] font-bold">{earnedBadges.length}/{BADGE_DEFS.length} discovered</p>
                   </div>
                   <span className="text-white/30 text-xl group-hover:translate-x-1 transition-transform">›</span>
                 </button>
@@ -228,13 +223,13 @@ export default function LandingPage() {
                   onClick={handleResume}
                   className="w-full py-4 rounded-xl bg-[#FF9900] text-[#232F3E] font-black hover:bg-[#FEBD69] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_6px_0_#CC7A00] text-base"
                 >
-                  RESUME PROTOCOL
+                  Resume Protocol
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { playSound('click'); clearCurrentSession(); }}
-                  className="w-full py-3 mt-4 rounded-xl border-2 border-white/10 text-white/40 font-black hover:bg-white/5 transition-colors text-[10px] uppercase tracking-[0.2em]"
+                  className="w-full py-3 mt-4 rounded-xl border-2 border-white/10 text-white/40 font-black hover:bg-white/5 transition-colors text-xs"
                 >
                   Skip & Start Fresh
                 </button>
@@ -243,7 +238,7 @@ export default function LandingPage() {
               <form onSubmit={handleStart} className="flex flex-col gap-8">
                 <div className="space-y-7">
                   <div className="flex flex-col gap-4">
-                    <label htmlFor="agent-name" className="text-[#2D3B2F]/60 text-[11px] uppercase tracking-[0.2em] font-extrabold flex items-center gap-1">
+                    <label htmlFor="agent-name" className="text-white/40 text-[11px] uppercase tracking-widest font-extrabold flex items-center gap-1">
                       Player Tag <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
@@ -254,12 +249,12 @@ export default function LandingPage() {
                       placeholder="e.g. Maverick"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="border border-[#2D3B2F]/20 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold shadow-sm"
+                      className="border border-white/25 bg-white/5 rounded-xl px-5 py-3.5 text-white text-sm focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/10 transition-all placeholder:text-white/30 font-bold shadow-inner backdrop-blur-sm"
                     />
                   </div>
 
                   <div className="flex flex-col gap-4">
-                    <label htmlFor="wave-code" className="text-[#2D3B2F]/60 text-[11px] uppercase tracking-[0.2em] font-extrabold flex items-center gap-1">
+                    <label htmlFor="wave-code" className="text-white/40 text-[11px] uppercase tracking-widest font-extrabold flex items-center gap-1">
                       Wave Code <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
@@ -270,12 +265,12 @@ export default function LandingPage() {
                       placeholder="e.g. WAVE-24"
                       value={waveCode}
                       onChange={(e) => setWaveCode(e.target.value)}
-                      className="border border-[#2D3B2F]/20 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold shadow-sm"
+                      className="border border-white/25 bg-white/5 rounded-xl px-5 py-3.5 text-white text-sm focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/10 transition-all placeholder:text-white/30 font-bold shadow-inner backdrop-blur-sm"
                     />
                   </div>
 
                   <div className="flex flex-col gap-4">
-                    <label htmlFor="trainer-name" className="text-[#2D3B2F]/60 text-[11px] uppercase tracking-[0.2em] font-extrabold flex items-center gap-1">
+                    <label htmlFor="trainer-name" className="text-white/40 text-[11px] uppercase tracking-widest font-extrabold flex items-center gap-1">
                       Lead Trainer <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
@@ -286,7 +281,7 @@ export default function LandingPage() {
                       placeholder="e.g. Sarah J."
                       value={trainerName}
                       onChange={(e) => setTrainerName(e.target.value)}
-                      className="border border-[#2D3B2F]/20 bg-white rounded-xl px-5 py-3.5 text-[#2D3B2F] text-sm outline-none focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/5 transition-all placeholder:text-[#2D3B2F]/20 font-bold shadow-sm"
+                      className="border border-white/25 bg-white/5 rounded-xl px-5 py-3.5 text-white text-sm focus:border-[#FF9900] focus:ring-4 focus:ring-[#FF9900]/10 transition-all placeholder:text-white/30 font-bold shadow-inner backdrop-blur-sm"
                     />
                   </div>
                 </div>
@@ -295,17 +290,17 @@ export default function LandingPage() {
                   <button
                     type="submit"
                     disabled={!formValid}
-                    className="w-full py-4 rounded-xl bg-[#232F3E] text-white font-black disabled:opacity-30 hover:bg-[#2D3B2F] transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed shadow-[0_6px_0_#151C25] text-base uppercase tracking-widest"
+                    className="w-full py-4 rounded-xl bg-[#232F3E] text-white font-black disabled:opacity-30 hover:bg-[#2D3B2F] transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed shadow-[0_6px_0_#151C25] text-base"
                   >
-                    START DEPLOYMENT
+                    Start Deployment
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleDemo}
-                    className="w-full py-3 rounded-xl border-2 border-[#232F3E]/5 text-[#232F3E]/40 font-black hover:bg-[#232F3E]/5 transition-colors text-[10px] uppercase tracking-[0.2em]"
-                  >
-                    QUICK DEMO
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleDemo}
+                      className="w-full py-3 rounded-xl border border-white/10 text-white/60 font-black hover:bg-white/5 transition-colors text-xs"
+                    >
+                      Quick Demo
+                    </button>
                 </div>
               </form>
             )}
@@ -340,7 +335,7 @@ export default function LandingPage() {
 
                 {/* Relocated and reduced prominence stats panel (Issue 1.1) */}
                 <div className="space-y-4 pt-8 border-t border-white/10">
-                  <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.15em]">Operational Readiness</p>
+                  <p className="text-white/30 text-[10px] font-black uppercase tracking-widest">Operational Readiness</p>
                   <div className="flex gap-10">
                     {[
                       { val: '01', label: 'Learning Zone' },
@@ -349,7 +344,7 @@ export default function LandingPage() {
                     ].map(item => (
                       <div key={item.label}>
                         <p className="text-xl font-black text-white/80 leading-none">{item.val}</p>
-                        <p className="text-white/20 text-[9px] uppercase tracking-wider mt-1.5">{item.label}</p>
+                        <p className="text-white/20 text-[9px] font-bold mt-1.5">{item.label}</p>
                       </div>
                     ))}
                   </div>
@@ -360,7 +355,7 @@ export default function LandingPage() {
                 {STEPS.map((step) => (
                   <AnimatedCard key={step.num} tiltAmount={4} className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md relative group overflow-hidden">
                     <div className={[
-                      "absolute top-4 right-4 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg",
+                      "absolute top-4 right-4 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg",
                       step.tag === 'Train' 
                         ? "bg-[#00A8A2] text-white" 
                         : "bg-[#FF9900] text-[#232F3E]"
@@ -381,8 +376,8 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-auto flex items-center justify-between text-white/20">
-              <p className="text-[10px] font-black uppercase tracking-[0.4em]">Sector: NA-01</p>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em]">v4.0.0-PRO</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Sector: NA-01</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">v4.0.0-PRO</p>
             </div>
           </div>
         </section>

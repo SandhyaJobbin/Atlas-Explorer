@@ -60,8 +60,21 @@
   box-sizing: border-box;
 }
 
+/* Global Accessibility Focus Indicators */
+:focus-visible {
+  outline: 2px solid #FF9900 !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 4px rgba(255, 153, 0, 0.2) !important;
+}
+
+/* Ensure focus is visible even on dark backgrounds */
+[class*="bg-black"], [class*="bg-gray-900"], [class*="bg-[#0"] {
+  --focus-ring-color: #FF9900;
+}
+
 html, body {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   margin: 0;
@@ -111,8 +124,15 @@ h1, h2, h3, .font-display {
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 16px;
   font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+}
+
+button {
+  cursor: pointer;
+}
+
+.btn-chunky:focus-visible {
+  outline-offset: 6px !important;
+  transform: translateY(-2px);
 }
 
 .btn-chunky:active {
@@ -444,4 +464,16 @@ h1, h2, h3, .font-display {
   .confetti-container, .confetti-piece {
     display: none !important;
   }
+}
+
+/* Phase 3: Performance & Atmosphere */
+@keyframes ambient-float {
+  0% { transform: scale(1.05) translate(0, 0); }
+  50% { transform: scale(1.15) translate(-1%, -1%); }
+  100% { transform: scale(1.05) translate(0, 0); }
+}
+
+.animate-ambient-float {
+  animation: ambient-float 60s ease-in-out infinite;
+  will-change: transform;
 }

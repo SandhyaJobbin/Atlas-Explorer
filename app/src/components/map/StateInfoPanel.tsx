@@ -66,9 +66,9 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div className="inline-flex items-center gap-2 bg-[#232F3E]/5 px-2 py-1 rounded-md border border-[#232F3E]/5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[#232F3E]/30">Phase 00</span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-[#232F3E]/30">Phase 00</span>
             <div className="w-px h-2.5 bg-[#232F3E]/10" />
-            <span className={`text-[9px] font-black uppercase tracking-widest ${theme.header}`}>{state.code}</span>
+            <span className={`text-[9px] font-black uppercase tracking-wider ${theme.header}`}>{state.code}</span>
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -84,8 +84,8 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
           <h2 className={`text-3xl sm:text-4xl font-black ${theme.header} leading-[1.1] tracking-tight`}>
             {state.name}
           </h2>
-          <p className={`mt-1 text-xs font-bold uppercase tracking-widest ${theme.label}`}>
-            {state.region}
+          <p className={`mt-1 text-[11px] font-bold tracking-wider ${theme.label}`}>
+            {state.region.toUpperCase()}
           </p>
         </div>
       </div>
@@ -93,15 +93,15 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
       {/* Details grid */}
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className={`${theme.bg} rounded-lg p-3`}>
-          <p className={`${theme.label} text-xs uppercase tracking-wide mb-1`}>Capital</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Capital</p>
           <p className={`font-semibold ${theme.header}`}>{state.capital}</p>
         </div>
         <div className={`${theme.bg} rounded-lg p-3`}>
-          <p className={`${theme.label} text-xs uppercase tracking-wide mb-1`}>Timezone</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Timezone</p>
           <p className={`font-semibold ${theme.header}`}>{state.timezoneLabel}</p>
         </div>
         <div className={`${theme.bg} rounded-lg p-3 col-span-2`}>
-          <p className={`${theme.label} text-xs uppercase tracking-wide mb-1`}>Coast</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Coast</p>
           <p className={`font-semibold ${theme.header}`}>{state.coast}</p>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
       {/* Specialties */}
       {state.specialties.length > 0 && (
         <div>
-          <p className={`${theme.label} text-xs uppercase tracking-wide mb-2`}>Known For</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-2`}>Known For</p>
           <div className="flex flex-wrap gap-2">
             {state.specialties.map((s) => (
               <span
@@ -128,7 +128,7 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
         <div className={`mt-2 rounded-xl border border-dashed ${theme.border} p-3 bg-white/50`}>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-lg">💡</span>
-            <p className={`${theme.label} text-[10px] font-black uppercase tracking-widest`}>Did you know?</p>
+            <p className={`${theme.label} text-[10px] font-black tracking-wider`}>Did you know?</p>
           </div>
           <p className={`text-xs font-medium leading-relaxed ${theme.header}`}>
             {triviaFact}

@@ -9,19 +9,25 @@ const GAME_ICONS: Record<string, string> = { crack: '01', pin: '02', sorter: '03
 const START_COPY: Record<string, string> = {
   crack: 'Begin descent',
   pin:   'Open the map',
-  sorter:'Start stacking',
+  sorter:'Sort the zones',
 };
 
 const INTRO_COPY: Record<string, string> = {
   crack:  'Catch each falling location tag, type the right code, and keep your streak alive.',
   pin:    'Scan the map, hit the glowing target, and clear each drop before the timer burns out.',
-  sorter: 'Drag city cards into the right home column and combo through the board.',
+  sorter: 'Drag each state or province into its correct timezone zone. Stack combos to max your score before the clock runs out.',
+};
+
+const RETRY_MESSAGES: Record<string, string> = {
+  crack:  'The signal was unstable. Stabilize the connection and decode with precision.',
+  pin:    'Target lock lost. Recalibrate your scanners and secure the sector.',
+  sorter: 'Temporal alignment failed. Re-sort the zones to maintain synchronization.',
 };
 
 const DISPLAY_LABELS: Record<string, string> = {
   crack:  'Code Drop',
   pin:    'Pin Rush',
-  sorter: 'City Stack',
+  sorter: 'Tz Sorter',
 };
 
 const PIN_POSITIONS = [
@@ -54,11 +60,14 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
       ? '—'
       : `${Math.round(Math.max(...game.attempts.map((a) => a.ratio)) * 100)}%`;
 
+  const attemptNumber = game.attempts.length + 1;
+  const retryMessage = RETRY_MESSAGES[definition.key] ?? 'System recalibration required. Run it back.';
+
   return (
-    <main className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#2D3B2F]">
+    <main className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#101813]">
       
       {/* ── Map panel ─────────────────────────────────────────────────────── */}
-      <div className="relative flex-1 bg-black/40 flex items-center justify-center overflow-hidden min-h-48 lg:min-h-0 border-r border-white/10">
+      <div className="relative flex-1 bg-black/20 flex items-center justify-center overflow-hidden min-h-48 lg:min-h-0 border-r border-white/5">
         
         {/* Background Journal Texture */}
         <div 
@@ -133,15 +142,15 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
         <div className="absolute top-8 left-8 flex flex-col gap-3 z-20">
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
-            <span className="text-white/40 text-[9px] uppercase font-black tracking-[0.2em]">Secured Sector</span>
+            <span className="text-white/40 text-[9px] uppercase font-black tracking-widest">Secured Sector</span>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shadow-[0_0_10px_rgba(245,158,11,0.3)]" />
-            <span className="text-white/40 text-[9px] uppercase font-black tracking-[0.2em]">Active Signal</span>
+            <span className="text-white/40 text-[9px] uppercase font-black tracking-widest">Active Signal</span>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-            <span className="text-white/40 text-[9px] uppercase font-black tracking-[0.2em]">Pending Intel</span>
+            <span className="text-white/40 text-[9px] uppercase font-black tracking-widest">Pending Intel</span>
           </div>
         </div>
 
@@ -157,50 +166,73 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
       </div>
 
       {/* ── Mission brief panel ───────────────────────────────────────────── */}
-      <div className="w-full lg:w-[420px] bg-white flex flex-col justify-center p-12 gap-8 relative overflow-hidden paper-texture">
+      <div className={`w-full lg:w-[420px] flex flex-col justify-center p-12 gap-8 relative overflow-hidden transition-colors duration-700 ${
+        isRetry ? 'bg-[#1a0c0c]' : 'bg-[#0a0f0d]'
+      }`}>
         
-        {/* Subtle dot pattern on white */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'var(--geo-dot-pattern)', backgroundSize: '24px 24px' }} />
+        {/* Subtle dot pattern */}
+        <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'var(--geo-dot-pattern)', backgroundSize: '24px 24px' }} />
 
         {/* Kicker */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className={`w-8 h-8 text-white flex items-center justify-center rounded-lg shadow-lg font-mono text-xs font-black shrink-0 transition-colors duration-500 ${
-            isRetry ? 'bg-red-600' : 'bg-[#2D3B2F]'
-          }`}>
-            {icon}
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 text-black flex items-center justify-center rounded-lg shadow-lg font-mono text-xs font-black shrink-0 transition-colors duration-500 ${
+              isRetry ? 'bg-red-600' : 'bg-[#FF9900]'
+            }`}>
+              {icon}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white/40 text-[9px] font-black uppercase tracking-widest">
+                Sector Identification
+              </span>
+              <span className="text-[#FF9900] text-xs font-black">
+                PHASE {gameIndex + 1} // 0{totalGames}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[#2D3B2F]/40 text-[9px] font-black uppercase tracking-[0.3em]">
-              Sector Identification
-            </span>
-            <span className="text-[#2D3B2F] text-xs font-black">
-              PHASE {gameIndex + 1} // 0{totalGames}
-            </span>
-          </div>
+
+          {isRetry && (
+            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-md animate-pulse">
+              Retry Mode
+            </div>
+          )}
         </div>
 
         {/* Title + description */}
         <div className="relative z-10">
-          <h1 className="text-4xl font-black text-[#2D3B2F] leading-tight tracking-tighter">
+          <h1 className="text-4xl font-black text-white leading-tight tracking-tighter">
             {label}
-            {isRetry && <span className="text-red-600 ml-2 block text-2xl italic">Remix Protocol</span>}
+            {isRetry && <span className="text-red-500 ml-2 block text-2xl font-black uppercase tracking-tighter">Remix Protocol</span>}
           </h1>
-          <p className="text-[#2D3B2F]/60 mt-4 text-base leading-relaxed font-medium">
-            {INTRO_COPY[definition.key] ?? ''}
+          <p className="text-white/60 mt-4 text-base leading-relaxed font-medium">
+            {isRetry ? retryMessage : (INTRO_COPY[definition.key] ?? '')}
           </p>
+          {isRetry && (
+            <p className="text-red-500/70 mt-2 text-sm font-bold uppercase tracking-wide">
+              "Precision matters. Stabilize the signal and run it back."
+            </p>
+          )}
         </div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-4 relative z-10">
           {[
-            { label: 'Completion',  value: `${clearedCount}/${totalGames}`, accent: '#10B981' },
+            { 
+              label: isRetry ? 'Current Attempt' : 'Sectors Secured',  
+              value: isRetry ? `Attempt ${attemptNumber}` : `${clearedCount}/${totalGames}`, 
+              accent: isRetry ? '#EF4444' : '#10B981' 
+            },
             { label: 'Best Ratio',  value: bestLabel, accent: '#06B6D4' },
           ].map(({ label: l, value, accent }) => (
-            <div key={l} className="bg-white border-2 border-[#2D3B2F]/5 rounded-2xl p-5 shadow-sm">
-              <div className="text-[#2D3B2F]/40 text-[9px] uppercase font-black tracking-widest mb-2">{l}</div>
+            <div key={l} className={`bg-white/5 border border-white/10 rounded-2xl p-5 shadow-md transition-colors duration-500 ${
+              isRetry && l === 'Current Attempt' ? 'border-red-500/30 bg-red-500/5' : 'border-white/5'
+            }`}>
+              <div className="text-white/40 text-[9px] font-black tracking-wider mb-2">{l}</div>
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
-                <div className="text-[#2D3B2F] font-black text-xl tracking-tight">{value}</div>
+                <strong className="text-white font-mono text-xl leading-none">
+                  {value}
+                </strong>
               </div>
             </div>
           ))}
@@ -230,7 +262,7 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
           </div>
         </div>
 
-        <p className="text-[#2D3B2F]/30 text-[10px] font-bold text-center uppercase tracking-widest relative z-10">
+        <p className="text-[#2D3B2F]/30 text-[10px] font-bold text-center tracking-widest relative z-10">
           Unlimited retries · Stars based on precision
         </p>
       </div>

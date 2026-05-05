@@ -110,7 +110,7 @@ export default function TrainingCompletePage() {
 
         {/* Hero */}
         <div className="flex flex-col items-center gap-3">
-          <div className="text-7xl animate-bounce">🎉</div>
+          <div className="text-7xl animate-bounce" aria-hidden="true">🎉</div>
           <h1 className="text-4xl font-black text-[#F59E0B]">Training Complete!</h1>
           <p className="text-white/70 text-lg max-w-sm">
             You explored all 63 states and provinces across North America.
@@ -128,7 +128,7 @@ export default function TrainingCompletePage() {
             <div key={m.count} className="flex flex-col items-center gap-3">
               <div className="w-20 h-20 rounded-full bg-[#2A3441] flex items-center justify-center text-4xl shadow-2xl border-2 border-white/10 relative group transition-all hover:scale-110 hover:border-[#FF9900]/50 hover:shadow-[0_0_30px_rgba(255,153,0,0.2)]">
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#FF9900]/5 to-transparent rounded-full" />
-                {m.icon}
+                <span aria-hidden="true">{m.icon}</span>
                 
                 {/* Completion Checkmark Badge */}
                 <div className="absolute -top-1 -right-1 bg-[#22C55E] text-white w-7 h-7 rounded-full flex items-center justify-center border-4 border-[#1F2937] shadow-lg animate-in zoom-in duration-500 delay-300 fill-mode-backwards">
@@ -142,22 +142,23 @@ export default function TrainingCompletePage() {
                   {m.count}
                 </div>
               </div>
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/60">{m.label}</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-white/60">{m.label}</span>
             </div>
           ))}
         </div>
 
         {/* Timezone breakdown */}
         {tzRows.length > 0 && (
-          <div className="bg-[#232F3E] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
+        <div className="bg-[#1a232e]/90 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/10 backdrop-blur-xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+            <h2 className="text-white/50 text-[11px] font-bold mb-4">
               Timezone Breakdown
             </h2>
             <div className="grid grid-cols-2 gap-2">
               {tzRows.map(({ tz, label, color, count }) => (
                 <div
                   key={tz}
-                  className="flex items-center gap-3 bg-white/5 hover:bg-white/10 rounded-xl px-4 py-3 transition-colors border border-white/5"
+                  className="flex items-center gap-3 bg-white/[0.04] hover:bg-white/[0.08] rounded-2xl px-4 py-3 transition-colors border border-white/5 shadow-inner"
                 >
                   <span
                     className="w-3 h-3 rounded-full shrink-0 shadow-[0_0_10px_rgba(0,0,0,0.3)]"
@@ -178,16 +179,16 @@ export default function TrainingCompletePage() {
               <div className="mt-6 pt-6 border-t border-white/5 text-left">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">💡</span>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#00A8A2]">Master Explorer Fact</p>
+                  <p className="text-[9px] font-black uppercase tracking-wider text-[#00A8A2]">Master Explorer Fact</p>
                 </div>
-                <p className="text-white/80 text-sm leading-relaxed font-medium bg-white/5 p-4 rounded-xl border border-white/5 italic">
+                <p className="text-white/80 text-sm leading-relaxed font-medium bg-black/20 p-4 rounded-xl border border-white/5 italic">
                   "{triviaFact.fact}"
                 </p>
                 <p className="text-[10px] text-white/30 mt-2 text-right">— {triviaFact.stateName}</p>
               </div>
             )}
 
-            <p className="text-white/50 text-[10px] font-black uppercase tracking-[0.15em] mt-6 text-center border-t border-white/5 pt-4">
+            <p className="text-white/50 text-[10px] font-bold mt-6 text-center border-t border-white/5 pt-4">
               {states.filter((s) => s.country === 'US').length} US States &nbsp;·&nbsp;{' '}
               {states.filter((s) => s.country === 'CA').length} Canadian Provinces & Territories
             </p>
@@ -200,7 +201,7 @@ export default function TrainingCompletePage() {
           className="group relative bg-[#F59E0B] hover:bg-[#FBBF24] text-[#1F2937] font-black px-16 py-5 rounded-2xl text-xl transition-all shadow-[0_0_40px_rgba(245,158,11,0.3)] hover:scale-105 active:scale-95 mt-4"
         >
           <span className="relative z-10 flex items-center gap-3">
-            PROCEED TO MISSION PHASE
+            Proceed to Mission Phase
             <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>

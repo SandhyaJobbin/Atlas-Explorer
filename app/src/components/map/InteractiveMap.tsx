@@ -58,6 +58,7 @@ export default function InteractiveMap({
   wrongCode = null,
   mode = 'explore',
   timezoneMap = {},
+  hoveredTimezone = null,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -69,6 +70,9 @@ export default function InteractiveMap({
     midpoint: PointerPoint;
     transform: Transform;
   } | null>(null);
+
+  const onRegionClickRef = useRef(onRegionClick);
+  onRegionClickRef.current = onRegionClick;
 
   const [svgContent, setSvgContent] = useState<string | null>(svgCache);
   const [loading, setLoading] = useState(!svgCache);
@@ -100,7 +104,7 @@ export default function InteractiveMap({
     if (contentRef.current) {
       requestAnimationFrame(() => {
         if (contentRef.current) {
-          contentRef.current.style.transform = `translate3d(${clamped.panX}px, ${clamped.panY}px, 0) scale(${clamped.zoom})`;
+          contentRef.current.style.transform = `translate(${clamped.panX}px, ${clamped.panY}px) scale(${clamped.zoom})`;
         }
       });
     }
@@ -120,6 +124,7 @@ export default function InteractiveMap({
 
   useEffect(() => {
     if (!svgContent || !contentRef.current) return;
+    const cleanups: (() => void)[] = [];
     contentRef.current.querySelectorAll('.atlas-region').forEach((el) => {
       if (!(el instanceof SVGPathElement)) return;
       const code = el.getAttribute('data-code') || '';
@@ -153,8 +158,25 @@ export default function InteractiveMap({
       }
 
       el.style.cursor = mode === 'gameplay' && !correctCode && !wrongCode ? 'crosshair' : 'pointer';
+      
+      // Accessibility: Keyboard navigation
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', `Region ${code}`);
+      
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onRegionClickRef.current(code);
+        }
+      };
+
+      el.addEventListener('keydown', handleKeyDown as any);
+      cleanups.push(() => el.removeEventListener('keydown', handleKeyDown as any));
     });
-  }, [svgContent, highlightedCodes, activeCode, correctCode, wrongCode, mode, timezoneMap, hoveredTimezone]);
+
+    return () => cleanups.forEach(fn => fn());
+  }, [svgContent, highlightedCodes, activeCode, correctCode, wrongCode, mode, timezoneMap, hoveredTimezone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const container = containerRef.current;
@@ -339,10 +361,10 @@ export default function InteractiveMap({
       <div
         ref={contentRef}
         style={{
-          transform: `translate3d(${transformRef.current.panX}px, ${transformRef.current.panY}px, 0) scale(${transformRef.current.zoom})`,
+          transform: `translate(${transformRef.current.panX}px, ${transformRef.current.panY}px) scale(${transformRef.current.zoom})`,
         }}
         className={[
-          'absolute inset-0 origin-center will-change-transform [&_svg]:w-full [&_svg]:h-full [&_svg]:block',
+          'absolute inset-0 origin-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block',
           '[&_.atlas-region]:transition-all [&_.atlas-region]:duration-300',
           '[&_.is-unvisited]:animate-map-pulse [&_.is-highlighted]:scale-[1.01]',
         ].join(' ')}
@@ -358,6 +380,14 @@ export default function InteractiveMap({
         .atlas-region {
           cursor: pointer !important;
           paint-order: stroke fill markers;
+          outline: none;
+        }
+        .atlas-region:focus-visible {
+          stroke: #FF9900 !important;
+          stroke-width: 4px !important;
+          filter: brightness(1.2);
+          z-index: 50;
+          position: relative;
         }
         .atlas-region:hover, .is-tz-hover {
           filter: brightness(1.5) saturate(1.3);

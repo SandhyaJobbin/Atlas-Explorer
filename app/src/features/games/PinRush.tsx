@@ -216,6 +216,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   // Handle timeout (timer reaches 0)
   useEffect(() => {
     if (timeLeft > 0 || locked || !questions.length || qi >= TOTAL_QUESTIONS) return;
+    if (timerRef.current) clearInterval(timerRef.current);
     pendingClickRef.current = null;
     setLocked(true);
   }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -251,18 +252,17 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
   // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
-    <main ref={containerRef} className="flex-1 flex flex-col bg-[#4a3728] p-3 gap-2 overflow-hidden relative">
+    <main ref={containerRef} className="flex-1 flex flex-col bg-[#18120e] p-3 gap-2 overflow-hidden relative">
       
-      {/* Background Video: Desert Expedition */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-[0.12] pointer-events-none"
-      >
-        <source src={publicAsset('/assets/video/desert-bg.mp4')} type="video/mp4" />
-      </video>
+      {/* Thematic Background: Desert Expedition (Performance Optimized) */}
+      <div 
+        className="absolute inset-0 w-full h-full object-cover opacity-[0.12] pointer-events-none z-0 animate-ambient-float"
+        style={{ 
+          backgroundImage: `url(${publicAsset('/assets/generated/poster-desert.png')})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      />
 
       {/* Terrain Pattern Overlay: Dot Grid */}
       <div 
@@ -284,20 +284,20 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-white font-black text-lg tracking-tight">Pin Rush</span>
-            <span className="text-[#E5E7EB] text-[9px] uppercase tracking-[0.3em] font-black opacity-60">
+            <span className="text-[#E5E7EB] text-[9px] uppercase tracking-widest font-black opacity-60">
               Desert Expedition
             </span>
           </div>
         </div>
         
-        <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.05] border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-md">
+        <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.04] border border-white/10 px-6 py-2.5 rounded-2xl backdrop-blur-md">
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Points</span>
+            <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">POINTS</span>
             <strong className="text-white font-mono text-xl leading-none">{score.toLocaleString()}</strong>
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
+            <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">STREAK</span>
             <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
               <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-white'}`}>
                 {streak}x
@@ -313,7 +313,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Objective</span>
+            <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">OBJECTIVE</span>
             <strong className="text-white font-mono text-lg leading-none">{qi + 1}/{TOTAL_QUESTIONS}</strong>
           </div>
         </AnimatedCard>
@@ -339,7 +339,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
       </div>
 
       {/* Map area container */}
-      <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md shadow-2xl mt-1">
+      <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/5 bg-white/[0.02] backdrop-blur-md shadow-2xl mt-1">
         {/* Radar sweep (Golden tint) */}
         <div
           className="absolute inset-0 pointer-events-none z-10 opacity-20"
@@ -353,7 +353,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         {/* Prompt bubble with animation */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <div className="bg-[#2D3B2F]/95 border border-[#F59E0B]/50 backdrop-blur-xl rounded-2xl px-8 py-4 shadow-[0_15px_40px_rgba(0,0,0,0.6)] animate-in zoom-in duration-300">
-            <span className="text-[#F59E0B] text-[10px] uppercase tracking-[0.3em] font-black block mb-1 text-center">Satellite Target</span>
+            <span className="text-[#F59E0B] text-[10px] uppercase tracking-wider font-black block mb-1 text-center">Satellite Target</span>
             <span className="text-white text-xl font-black tracking-tight text-center block">
               {prompt}
             </span>
@@ -364,7 +364,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         {currentQ?.type === 'timezone' && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
             <div 
-              className="px-6 py-2 rounded-full text-white text-[10px] font-black shadow-2xl border-2 border-white/10 animate-in slide-in-from-bottom duration-500 uppercase tracking-widest"
+              className="px-6 py-2 rounded-full text-white text-[10px] font-black shadow-2xl border-2 border-white/10 animate-in slide-in-from-bottom duration-500 uppercase tracking-wider"
               style={{ 
                 background: `linear-gradient(135deg, ${tzBg(currentQ.timezone)}, rgba(0,0,0,0.4))`,
                 backdropFilter: 'blur(12px)'
@@ -381,7 +381,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
             className={[
               'w-full h-full relative z-0 transition-all duration-300',
               locked ? 'opacity-40 grayscale-[0.8] scale-95' : 'opacity-100 scale-100',
-              '[&_.atlas-region]:fill-[#4A6B5B] [&_.atlas-region]:stroke-black/40',
+              '[&_.atlas-region]:fill-[#5A8B6B] [&_.atlas-region]:stroke-[#2D4A3A]',
               '[&_.atlas-region:hover]:fill-[#F59E0B]/40 [&_.atlas-region:hover]:stroke-[#F59E0B] [&_.atlas-region:hover]:translate-y-[-2px] transition-all',
             ].join(' ')}
           >
@@ -467,9 +467,9 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
                 {isFound && <span className="text-[10px] flex-shrink-0">{isCA ? '🇨🇦' : '🇺🇸'}</span>}
                 {isMissed && <span className="bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase flex-shrink-0">✗</span>}
                 {isActive && (
-                  <button 
+                  <button
                     onClick={handleSkip}
-                    className="flex-shrink-0 bg-[#F59E0B] hover:bg-[#FFB12B] text-[#2D3B2F] text-[8px] font-black px-3 py-1.5 rounded-lg border-b-2 border-[#B47B00] transition-all uppercase tracking-wider shadow-md active:border-b-0 active:translate-y-0.5"
+                    className="flex-shrink-0 bg-[#F59E0B] hover:bg-[#FFB12B] text-[#2D3B2F] text-[9px] font-black px-3 py-1.5 rounded-lg border-b-2 border-[#B47B00] transition-all shadow-md active:border-b-0 active:translate-y-0.5"
                   >
                     Skip Target
                   </button>

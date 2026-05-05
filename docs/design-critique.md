@@ -13,7 +13,7 @@
 4. [Game Intro Screens](#4-game-intro-screens)
 5. [CodeDrop Mid-game](#5-codedrop-mid-game)
 6. [PinRush Mid-game](#6-pinrush-mid-game)
-7. [CityStack Mid-game](#7-citystack-mid-game)
+7. [Tz Sorter Mid-game](#7-tz-sorter-mid-game-formerly-citystack)
 8. [Fail / Retry Intro](#8-fail--retry-intro)
 9. [Results Page](#9-results-page)
 10. [Mobile Viewport](#10-mobile-viewport)
@@ -171,27 +171,41 @@ Severity: **Critical** = blocks usability or accessibility | **Major** = hurts p
 
 ---
 
-## 7. CityStack Mid-game
+## 7. Tz Sorter Mid-game (formerly CityStack)
 
-**Screenshot:** `11-citystack-midgame.png`
+**Screenshot:** `11-citystack-midgame.png` *(needs re-capture — game mechanic has changed)*
 
-### Strengths
-- The forest background video/image creates strong atmosphere
-- Three-column drop zone layout (British Columbia, Newfoundland and Labrador, Washington) is immediately understandable
-- The draggable city cards at the top are clearly distinct from the drop zones
-- The compass/crosshair loading indicator in each drop zone signals that cards should be placed there
-- The HUD is consistent with other games (Points/Streak/Level)
+> **Note:** The CityStack game (drag cities into state/province columns) has been fully replaced by a **Timezone Sorter** (drag state/province cards into timezone buckets). The six original issues from the prior critique are re-evaluated below.
 
-### Issues
+### Resolved Issues from Prior Critique
+
+| # | Prior Issue | Status | Notes |
+|---|-------------|--------|-------|
+| 7.1 | City name cards truncated and unreadable | ✅ Resolved | Cards now display state/province names (e.g. "Texas", "Ontario") with state silhouettes. Names are much shorter and readable at the current `max-w-[100px]`. |
+| 7.3 | Drop zones and source cards same visual weight | ✅ Resolved | Timezone buckets have colored header pills, timezone labels, and placed-card counters. The source tray uses a distinct dark glass container (`bg-black/60 backdrop-blur-xl`). Clear visual distinction. |
+| 7.4 | "NEWFOUNDLAND AND LABRADOR" causing layout issues | ✅ Resolved | Bucket headers now show timezone names ("Pacific", "Mountain", "Central") — all short, uniform labels. |
+| 7.5 | Timer text "0% REMAINING" too small | ✅ Resolved | Timer now shows a numeric countdown (`{timeLeft}S`) alongside a progress bar with danger-state coloring (red + pulse at <30%). |
+| 7.6 | Bottom half of screen wasted | ✅ Resolved | Timezone buckets use `flex-1` and fill available vertical space. Layout is balanced between the source tray and bucket grid. |
+
+### Current Strengths
+- The timezone bucket concept is immediately understandable — each bucket has a colored pill, full timezone name, and placed-card counter
+- State silhouettes on draggable cards add visual interest and aid recognition
+- Timezone-based color coding (`TZ_FILLS`) creates clear visual grouping
+- Timer bar with numeric countdown and danger-state coloring creates good urgency
+- The "All Regions Assigned" pulsing message when the tray is empty provides clear round completion feedback
+- Forest background with `backdrop-blur-xl` on interactive elements maintains atmosphere without sacrificing readability
+- Placed cards inside buckets show state outline + name + country flag, giving satisfying feedback
+
+### Current Issues
 
 | # | Severity | Category | Issue | Recommendation |
 |---|----------|----------|-------|----------------|
-| 7.1 | Critical | Readability | The city name cards at the top are severely truncated: "Cor...ir Pre...", "V...sto..e", "St. Jo h...". Card names are unreadable, defeating the purpose of the game. | Widen cards, reduce font size, or use a scrolling/wrapping layout for long names. This completely blocks gameplay. |
-| 7.2 | Major | Color/Contrast | The entire screen has a dark green overlay from the forest background that makes everything muddy. The drop zones, cards, and text all blend together. | Increase the opacity of card backgrounds, or darken the forest overlay to create more separation. Use a frosted-glass/backdrop-blur effect on the card area. |
-| 7.3 | Major | Visual Hierarchy | The drop zone headers ("BRITISH COLUMBIA", "NEWFOUNDLAND AND LABRADOR", "WASHINGTON") are the same visual weight as the draggable cards above. There's no clear distinction between "target" and "source". | Make drop zone headers bold/larger and add a colored underline. Make source cards slightly smaller with a different background tone. |
-| 7.4 | Major | Layout | "NEWFOUNDLAND AND LABRADOR" is very long and may cause layout issues in the center column. | Consider abbreviating to "Newfoundland & Lab." in the game context, or use a two-line layout. |
-| 7.5 | Minor | UX Pattern | The timer shows "0% REMAINING" in very small text. For a timed game, the timer needs to be much more prominent. | Make the progress bar taller (8px -> 12px) and add a numeric countdown. |
-| 7.6 | Minor | Spacing | The large empty space below the three drop zones (bottom half of screen) is wasted. The game content is compressed into the top 40% of the viewport. | Expand drop zones vertically to use available space, making card placement targets larger and easier to hit. |
+| 7.1 | Major | UX / Spoiler | Each draggable state card in the source tray shows the state's timezone as a colored badge (e.g. a teal "PST" pill). This reveals the answer before the player drags — the player can simply match the badge color/text to the bucket header instead of using geography knowledge. | Hide the timezone badge on source cards. Show it only after the card is correctly placed. The silhouette and state name alone should be the clues. |
+| 7.2 | Minor | Color/Contrast | The forest background at 20% opacity still muddies the lower portion of the screen slightly. The bucket grid area can feel dim when all buckets are empty. | Consider a subtle upward gradient overlay (`bg-gradient-to-t from-black/60`) behind the bucket grid to create more separation from the background texture. |
+| 7.3 | Major | Accessibility | Drag-and-drop is the only interaction method. Mobile users and keyboard-only users cannot play this game — there are no touch-tap or keyboard alternatives for placing cards. | Add tap-to-select + tap-bucket-to-place as a fallback for touch/keyboard. Highlight the selected card and show eligible buckets. |
+| 7.4 | Minor | Typography | State names truncate at `max-w-[100px]` which clips longer names like "North Carolina" or "British Columbia" to "North Car..." or "British Co...". While less severe than the old city name issue, it still hurts readability for ~10 states/provinces. | Increase `max-w` to `130px` or allow two-line wrapping for longer names. Alternatively, show the full name on hover/long-press. |
+| 7.5 | Minor | Layout | The instruction banner ("Drag each state · province into its correct timezone zone") is very small (`text-[10px]`) and uses the word "zone" redundantly ("timezone zone"). | Fix the copy to "Drag each state/province into its timezone" and bump to `text-xs` (12px). |
+| 7.6 | Minor | Feedback | When a card is dropped into the wrong bucket, the card briefly flashes red and shakes, but there is no indication of *which* bucket was correct. Players learn nothing from the mistake. | After a wrong drop, briefly highlight the correct bucket with a pulse/glow so the player can learn the association. |
 
 ---
 
@@ -281,7 +295,7 @@ These issues appear across multiple screens:
 
 ### Critical (Fix immediately)
 
-1. **CityStack card truncation** (#7.1) -- City names are unreadable, making the game unplayable
+1. ~~**CityStack card truncation** (#7.1)~~ — ✅ Resolved: game replaced with Tz Sorter; state names are short and readable
 2. **Mobile landing lacks context** (#10.1) -- New mobile users see a form with zero explanation
 3. **CodeDrop input contrast** (#5.1) -- Input field is nearly invisible against dark background
 4. **No exit/back during games** (#11.7) -- Users are trapped once they start a game
@@ -289,7 +303,7 @@ These issues appear across multiple screens:
 
 ### Major (Fix before launch)
 
-6. **Dark-on-dark contrast everywhere** (#11.2, #9.1, #7.2) -- Cards and containers blend into backgrounds across Training Complete, Results, and CityStack
+6. **Dark-on-dark contrast everywhere** (#11.2, #9.1, #7.2) -- Cards and containers blend into backgrounds across Training Complete, Results, and Tz Sorter (minor — backdrop-blur now helps)
 7. **Missing CTAs on completion screens** (#3.1, #9.6) -- Training Complete and Results pages are dead ends with no clear next action
 8. **Tracked uppercase overuse** (#11.1) -- Reduce to labels/tags only; use regular case for descriptions and secondary text
 9. **Landing form input visibility** (#1.6, #10.2) -- Low-contrast borders on both desktop and mobile
@@ -303,7 +317,7 @@ These issues appear across multiple screens:
 14. Standardize heading hierarchy on Map Explorer (#2.1)
 15. Add `prefers-reduced-motion` support for confetti (#3.5)
 16. Enlarge progress dots on game intros (#4.5)
-17. Add numeric timer countdown to PinRush (#6.3) and CityStack (#7.5)
+17. Add numeric timer countdown to PinRush (#6.3) ~~and CityStack (#7.5)~~ — ✅ Tz Sorter timer resolved
 18. Add focus indicators for keyboard accessibility (#11.4)
 19. Add proper aria-labels for emoji-based UI elements (#11.5)
 20. Consider lazy-loading background videos (#11.6)

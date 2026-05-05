@@ -131,12 +131,19 @@ export default function MapExplorerPage() {
     }
   }
 
+  function handleExit() {
+    if (window.confirm('Are you sure you want to exit the training session?')) {
+      navigate('/');
+    }
+  }
+
   return (
     <AppLayout variant="training">
       <TrainingTopBar
         explored={clicked.length}
         total={TOTAL}
         label="Map Explorer"
+        onExit={handleExit}
       />
 
       {phase === 'intro' ? (
@@ -176,7 +183,7 @@ export default function MapExplorerPage() {
               />
             ))}
             <div className="absolute bottom-8 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/10 bg-black/45 px-6 py-2 text-center shadow-2xl backdrop-blur-md">
-              <div className="text-[9px] font-black uppercase tracking-widest text-white/45">Training Zone</div>
+              <div className="text-[9px] font-black uppercase tracking-wider text-white/45">Training Zone</div>
               <div className="text-sm font-black uppercase tracking-tight text-[#00A8A2]">North America Atlas</div>
             </div>
           </section>
@@ -192,11 +199,11 @@ export default function MapExplorerPage() {
             />
             <div className="relative z-10 flex items-center justify-between">
               <div className="inline-flex items-center gap-2.5 bg-[#232F3E]/5 px-3 py-1.5 rounded-lg border border-[#232F3E]/10">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#232F3E]/40">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#232F3E]/40">
                   Phase 00
                 </span>
                 <div className="w-px h-3 bg-[#232F3E]/10" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#00A8A2]">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#00A8A2]">
                   Atlas calibration
                 </span>
               </div>
@@ -215,7 +222,7 @@ export default function MapExplorerPage() {
             <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               {OBJECTIVES.map((objective, idx) => (
                 <div key={objective.label} className={`rounded-2xl border-2 border-[#232F3E]/5 bg-white/75 p-4 shadow-sm backdrop-blur-sm pop-in ${idx === 0 ? 'stagger-1' : idx === 1 ? 'stagger-2' : idx === 2 ? 'stagger-3' : 'stagger-4'}`}>
-                  <div className="text-[9px] font-black uppercase tracking-widest text-[#232F3E]/35">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-[#232F3E]/35">
                     {objective.label}
                   </div>
                   <div className="mt-1 text-sm font-bold leading-snug text-[#232F3E]">
@@ -240,7 +247,7 @@ export default function MapExplorerPage() {
                   Continue to Results
                 </button>
               )}
-              <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-[#232F3E]/35">
+              <p className="mt-2 text-center text-[10px] font-bold text-[#232F3E]/35">
                 {TOTAL} regions to explore
               </p>
             </div>
@@ -253,12 +260,12 @@ export default function MapExplorerPage() {
               <div className="flex-1 w-full">
                 <div className="flex justify-between items-end mb-2.5">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">Expedition Progress</span>
+                    <span className="text-[10px] font-black text-white/30">EXPEDITION PROGRESS</span>
                     <h2 className="text-white font-black text-xl tracking-tight">Interactive Map</h2>
                   </div>
                   <div className="text-right leading-none">
                     <span className="text-3xl font-black text-[#00A8A2] tabular-nums">{clicked.length}</span>
-                    <span className="text-xs font-bold text-white/20 ml-2 tracking-widest uppercase">/ {TOTAL} Regions</span>
+                    <span className="text-xs font-bold text-white/20 ml-2 tracking-wider">/ {TOTAL} Regions</span>
                   </div>
                 </div>
                 <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden ring-4 ring-black/10">
@@ -277,9 +284,9 @@ export default function MapExplorerPage() {
                     <div 
                       key={m.count} 
                       className={`w-9 h-9 rounded-lg flex items-center justify-center text-base filter ${clicked.length >= m.count ? 'grayscale-0 opacity-100 scale-110 shadow-lg bg-white/10 border border-white/10' : 'grayscale opacity-20'} transition-all duration-500`}
-                      title={`${m.label} (${m.count} regions)`}
+                      aria-label={`${m.label} milestone: ${clicked.length >= m.count ? 'Achieved' : 'Locked'}`}
                     >
-                      {m.icon}
+                      <span aria-hidden="true">{m.icon}</span>
                     </div>
                   ))}
                 </div>
@@ -290,10 +297,10 @@ export default function MapExplorerPage() {
                       ? 'bg-[#00A8A2]/20 border-[#00A8A2] text-[#00A8A2] shadow-[0_0_15px_rgba(0,168,162,0.2)]' 
                       : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20'
                   }`}
-                  title="Toggle Legend"
+                  aria-label={showLegend ? "Hide Map Legend" : "Show Map Legend"}
                 >
-                  <span className="text-xl mb-0.5">🗺️</span>
-                  <span className="text-[8px] font-black uppercase tracking-widest leading-none">Legend</span>
+                  <span className="text-xl mb-0.5" aria-hidden="true">🗺️</span>
+                  <span className="text-[8px] font-black uppercase tracking-wider leading-none">Legend</span>
                 </button>
               </div>
             </div>
@@ -312,7 +319,7 @@ export default function MapExplorerPage() {
                 <div className="absolute top-3 left-3 z-20 animate-in fade-in zoom-in-95 duration-200">
                   <div className="rounded-xl border border-white/10 bg-[#0d1a0d]/85 p-3 shadow-2xl backdrop-blur-md">
                     <div className="flex items-center justify-between mb-3 px-1">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-white/40">Timezone Guide</p>
+                      <p className="text-[8px] font-black uppercase tracking-wider text-white/40">Timezone Guide</p>
                       <button onClick={() => setShowLegend(false)} className="text-white/20 hover:text-white/60">✕</button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2">
@@ -336,9 +343,9 @@ export default function MapExplorerPage() {
                 <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" aria-live="polite">
                   <div className="bg-[#232F3E] border-2 border-[#FEBD69] rounded-3xl p-8 shadow-[0_0_100px_rgba(254,189,105,0.3)] animate-in zoom-in-75 duration-500 text-center">
                     <div className="text-6xl mb-4">{milestonePopup.icon}</div>
-                    <div className="text-[#FEBD69] text-[10px] font-black uppercase tracking-[0.3em] mb-1">Milestone Reached!</div>
+                    <div className="text-[#FEBD69] text-[10px] font-black uppercase tracking-wider mb-1">Milestone Reached!</div>
                     <div className="text-3xl font-black text-white">{milestonePopup.label}</div>
-                    <div className="text-white/40 text-[10px] font-bold mt-2 uppercase tracking-widest">{clicked.length} Regions Explored</div>
+                    <div className="text-white/40 text-[10px] font-bold mt-2 tracking-widest">{clicked.length} Regions Explored</div>
                   </div>
                 </div>
               )}
@@ -389,7 +396,7 @@ export default function MapExplorerPage() {
                 {/* Left: Overall & Countries */}
                 <div className="flex-1 space-y-6">
                   <div>
-                    <h3 className="text-white font-black text-xs uppercase tracking-widest mb-3 opacity-50">Exploration progress</h3>
+                    <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Exploration Progress</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
                         <div className="flex justify-between items-end mb-2">
@@ -413,7 +420,7 @@ export default function MapExplorerPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-white font-black text-xs uppercase tracking-widest mb-3 opacity-50">Coastal achievements</h3>
+                    <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Coastal Achievements</h3>
                     <div className="flex flex-wrap gap-2">
                       {stats.byCoast.map(c => (
                         <div key={c.coast} className="bg-white/5 px-3 py-2 rounded-xl border border-white/5 flex items-center gap-3">
@@ -429,7 +436,7 @@ export default function MapExplorerPage() {
 
                 {/* Right: Timezones */}
                 <div className="w-full md:w-80">
-                  <h3 className="text-white font-black text-xs uppercase tracking-widest mb-3 opacity-50">Timezone Stamps</h3>
+                  <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Timezone Stamps</h3>
                   <div className="bg-white/5 rounded-2xl p-4 border border-white/5 grid grid-cols-2 gap-3">
                     {stats.byTimezone.map(tz => (
                       <div key={tz.tz} className="flex items-center justify-between">
@@ -445,16 +452,16 @@ export default function MapExplorerPage() {
 
                 {/* Far Right: Specialty Insight (Dataset use) */}
                 <div className="hidden lg:block w-64 border-l border-white/5 pl-8">
-                  <h3 className="text-white font-black text-xs uppercase tracking-widest mb-3 opacity-50">Atlas Trivia</h3>
+                  <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Atlas Trivia</h3>
                   <div className="space-y-4">
                     <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                      <p className="text-[8px] font-black text-[#00A8A2] uppercase tracking-[0.2em] mb-1">Knowledge Coverage</p>
+                      <p className="text-[8px] font-black text-[#00A8A2] uppercase tracking-wider mb-1">Knowledge Coverage</p>
                       <p className="text-xl font-mono text-white font-black">{Math.round((clicked.length / TOTAL) * 100)}%</p>
                     </div>
                     
                     {passportTrivia ? (
                         <div className="bg-white/5 rounded-2xl p-4 border border-dashed border-[#00A8A2]/30">
-                          <p className="text-[8px] font-black text-[#FF9900] uppercase tracking-[0.2em] mb-1">Did you know?</p>
+                          <p className="text-[8px] font-black text-[#FF9900] uppercase tracking-wider mb-1">Did you know?</p>
                           <p className="text-[10px] text-white/80 leading-relaxed font-medium">
                             {passportTrivia.text}
                           </p>

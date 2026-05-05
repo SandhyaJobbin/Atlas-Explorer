@@ -45,9 +45,9 @@ function RetryButton({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       disabled={seconds > 0}
-      className={`relative z-10 btn-chunky px-16 py-5 text-xl transition-all uppercase tracking-[0.2em] ${seconds > 0 ? 'opacity-40 cursor-not-allowed bg-gray-500 text-white' : 'btn-chunky-orange'}`}
+      className={`relative z-10 btn-chunky px-16 py-5 text-xl transition-all ${seconds > 0 ? 'opacity-40 cursor-not-allowed bg-gray-500 text-white' : 'btn-chunky-orange'}`}
     >
-      {seconds > 0 ? `SYNCING... (${seconds})` : 'INITIATE RETRY'}
+      {seconds > 0 ? `Syncing... (${seconds}s)` : 'Initiate Retry'}
     </button>
   );
 }
@@ -91,7 +91,7 @@ export default function FailInterstitial({
       />
 
       <div className="relative z-10 flex flex-col items-center gap-2">
-        <span className="text-[#FF6577] text-[10px] font-black uppercase tracking-[0.4em] drop-shadow-md">
+        <span className="text-[#FF6577] text-[10px] font-black uppercase tracking-widest drop-shadow-md">
           {gameLabel}
         </span>
         <h1 className="text-6xl font-black text-white tracking-tighter drop-shadow-2xl">
@@ -106,7 +106,7 @@ export default function FailInterstitial({
           <div className="text-7xl font-black text-white tabular-nums tracking-tighter opacity-80">
             <AnimatedScore target={attempt.score} />
           </div>
-          <div className="text-white/30 text-[9px] font-black uppercase tracking-[0.3em]">
+          <div className="text-white/30 text-[9px] font-black uppercase tracking-wider">
             Efficiency Logged
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function FailInterstitial({
 
         <div className="relative z-10 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1">
            <span className="text-white/20 text-[8px] font-black uppercase tracking-widest">Motivational Brief</span>
-           <p className="text-white/60 text-xs font-medium italic">{message}</p>
+           <p className="text-white/60 text-xs font-bold tracking-tight">{message}</p>
         </div>
       </AnimatedCard>
 

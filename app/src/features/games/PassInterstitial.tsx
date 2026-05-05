@@ -130,7 +130,7 @@ export default function PassInterstitial({
       </div>
 
       <div className="relative z-10 flex flex-col items-center gap-2">
-        <span className="text-[#10B981] text-[10px] font-black uppercase tracking-[0.4em] drop-shadow-md">
+        <span className="text-[#10B981] text-[10px] font-black uppercase tracking-widest drop-shadow-md">
           {gameLabel}
         </span>
         <h1 className="text-6xl font-black text-white tracking-tighter drop-shadow-2xl">
@@ -145,14 +145,14 @@ export default function PassInterstitial({
           <div className="text-7xl md:text-8xl font-black text-[#F59E0B] tabular-nums tracking-tighter drop-shadow-[0_0_30px_rgba(245,158,11,0.3)]">
             <AnimatedScore target={attempt.score} />
           </div>
-          <div className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">
+          <div className="text-white/40 text-[9px] font-black uppercase tracking-wider">
             Intelligence Secured
           </div>
         </div>
 
         <StarStrip stars={attempt.stars} />
 
-        <div className="relative z-10 mt-6 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 flex gap-6 text-[11px] font-black uppercase tracking-widest text-white/60">
+        <div className="relative z-10 mt-6 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 flex gap-6 text-[10px] font-black tracking-widest text-white/60">
           <div>
             <span className="text-white/20 mr-2">Accuracy:</span>
             {Math.round(attempt.ratio * 100)}%
@@ -170,7 +170,7 @@ export default function PassInterstitial({
         <div className="relative z-10 max-w-md bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-700 delay-500">
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="text-xl">💡</span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#F59E0B]">Explorer Tip</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-[#F59E0B]">Explorer Tip</span>
           </div>
           <p className="text-white/80 text-sm leading-relaxed font-medium italic">
             "{randomFact}"
@@ -181,7 +181,7 @@ export default function PassInterstitial({
       {/* Badges */}
       {newBadges.length > 0 && (
         <div className="relative z-10 flex flex-col gap-2">
-           <span className="text-white/30 text-[9px] font-black uppercase tracking-widest">Merit Discovered</span>
+           <span className="text-white/30 text-[9px] font-black tracking-widest">Merit Discovered</span>
            <div className="flex gap-3 justify-center">
              {newBadges.map((badge) => (
                <div key={badge.id} className="px-4 py-2 rounded-full bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[#F59E0B] text-xs font-black uppercase tracking-widest animate-bounce">
@@ -200,7 +200,7 @@ export default function PassInterstitial({
         {isFinalMission ? 'Mission Log' : 'Next Sector'}
       </button>
 
-      <p className="relative z-10 text-white/20 text-[9px] font-black uppercase tracking-widest animate-pulse">
+      <p className="relative z-10 text-white/20 text-[9px] font-black tracking-widest animate-pulse">
         Press continue to synchronize data
       </p>
     </main>

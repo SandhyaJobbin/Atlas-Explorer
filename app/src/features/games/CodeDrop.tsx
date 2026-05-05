@@ -254,16 +254,15 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
   return (
     <main ref={containerRef} className="flex-1 flex flex-col bg-[#001f3f] p-5 gap-4 overflow-hidden relative">
       
-      {/* Background Video: Ocean Descent */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-[0.15] pointer-events-none"
-      >
-        <source src={publicAsset('/assets/video/water-bg.mp4')} type="video/mp4" />
-      </video>
+      {/* Thematic Background: Ocean Descent (Performance Optimized) */}
+      <div 
+        className="absolute inset-0 w-full h-full object-cover opacity-[0.15] pointer-events-none z-0 animate-ambient-float"
+        style={{ 
+          backgroundImage: `url(${publicAsset('/assets/generated/poster-water.png')})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      />
 
       {/* Terrain Pattern Overlay */}
       <div 
@@ -285,7 +284,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-white font-black text-lg tracking-tight">Code Drop</span>
-            <span className="text-[#06B6D4] text-[9px] uppercase tracking-[0.3em] font-black">
+            <span className="text-[#06B6D4] text-[9px] uppercase tracking-widest font-black">
               Ocean Descent
             </span>
           </div>
@@ -293,12 +292,12 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
         
         <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.05] border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-md">
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Points</span>
+            <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">POINTS</span>
             <strong className="text-white font-mono text-xl leading-none">{score.toLocaleString()}</strong>
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
+            <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">STREAK</span>
             <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
               <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-[#06B6D4]'}`}>
                 {streak}x
@@ -317,7 +316,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
 
       {/* Progress Header */}
       <div className="relative z-10 px-2 space-y-1.5">
-        <div className="flex justify-between items-end text-[10px] font-black tracking-[0.2em] uppercase">
+        <div className="flex justify-between items-end text-[10px] font-black tracking-wider uppercase">
           <span className="text-[#06B6D4]">Depth: {qi + 1} <span className="text-white/20">/</span> {TOTAL_QUESTIONS}</span>
           <span className="text-white/30">{progress}%</span>
         </div>
@@ -349,14 +348,14 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
               transform: `translateX(-50%) rotate(${(qi % 2 === 0 ? 1 : -1) * (blockLocked ? 0 : 2)}deg)`
             }}
           >
-            <span className="block text-[#06B6D4] text-[10px] uppercase tracking-[0.15em] font-bold mb-2 text-center">Cipher Signal</span>
+            <span className="block text-[#06B6D4] text-[10px] uppercase tracking-wider font-bold mb-2 text-center">Cipher Signal</span>
             <span className="block font-black text-3xl tracking-tight text-center">
-              {blockLocked ? 'SECURED' : currentQ.state.name}
+              {blockLocked ? 'Secured' : currentQ.state.name}
             </span>
             {!blockLocked && (
               <div className="mt-3 flex items-center justify-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#06B6D4] animate-pulse" />
-                <span className="text-[10px] text-white/50 uppercase tracking-[0.1em] font-bold">
+                <span className="text-[10px] text-white/50 uppercase tracking-widest font-bold">
                   {currentQ.type === 'code' ? 'Input ID' : 'Select Zone'}
                 </span>
               </div>
@@ -410,32 +409,32 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
                 }}
                 className={[
                   'w-full rounded-2xl border-2 px-6 py-5 text-center text-4xl font-mono font-black uppercase tracking-[0.5em]',
-                  'bg-[#1E3A5F]/80 text-white placeholder:text-white/40 outline-none transition-all duration-300 shadow-inner',
+                  'bg-[#1E3A5F]/80 text-white placeholder:text-white/60 transition-all duration-300 shadow-inner',
                   wrongFlash
                     ? 'border-[#EF4444] bg-[#EF4444]/20 text-[#EF4444]'
-                    : 'border-white/20 focus:border-[#06B6D4]/50 focus:shadow-[0_0_25px_rgba(6,182,212,0.2)]',
+                    : 'border-white/30 focus:border-[#06B6D4]/50 focus:shadow-[0_0_25px_rgba(6,182,212,0.2)]',
                   locked && 'opacity-40 cursor-not-allowed',
                 ].join(' ')}
               />
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Code Cipher</div>
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] font-black text-white/20 uppercase tracking-widest">Code Cipher</div>
             </div>
             
             <button
               type="submit"
               disabled={locked || inputVal.length < 2}
               className={[
-                'w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] transition-all duration-300',
-                inputVal.length < 2 || locked
-                  ? 'bg-white/5 text-white/20 border border-white/10 shadow-none'
-                  : 'bg-gradient-to-r from-[#06B6D4] to-[#22C55E] text-[#001f3f] shadow-[0_8px_0_#048E9B] hover:translate-y-0.5 active:translate-y-1',
+                'w-full rounded-2xl border-2 px-6 py-4 font-black text-lg uppercase tracking-widest transition-all duration-300',
+                locked || inputVal.length < 2
+                  ? 'border-white/10 bg-white/5 text-white/30 cursor-not-allowed'
+                  : 'border-[#06B6D4]/50 bg-[#06B6D4]/20 text-[#06B6D4] hover:bg-[#06B6D4]/30 hover:shadow-[0_0_25px_rgba(6,182,212,0.3)]',
               ].join(' ')}
             >
-              {locked ? 'SECURED' : inputVal.length < 2 ? 'TYPE THE CODE' : 'COMMIT KEY'}
+              {locked ? 'Secured' : inputVal.length < 2 ? 'Type the code' : 'Commit Key'}
             </button>
           </form>
         ) : currentQ?.type === 'timezone' ? (
           <div className="space-y-4">
-            <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] text-center">Sector Sync Protocol</div>
+            <div className="text-[9px] font-black text-white/30 uppercase tracking-widest text-center">Sector Sync Protocol</div>
             <div className={`grid grid-cols-2 gap-4 ${wrongFlash ? 'animate-shake' : ''}`}>
               {currentQ.choices.map((tz) => (
                 <button
@@ -443,7 +442,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
                   disabled={locked}
                   onClick={() => handleTimezoneChoice(tz)}
                   className={[
-                    'rounded-2xl border-2 px-6 py-4 font-black text-sm uppercase tracking-[0.2em] transition-all duration-300 relative overflow-hidden group',
+                    'rounded-2xl border-2 px-6 py-4 font-black text-sm tracking-wider transition-all duration-300 relative overflow-hidden group',
                     'bg-white/[0.05] border-white/10 text-white hover:border-[#06B6D4]/50 hover:bg-[#06B6D4]/10',
                     locked ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.03] active:scale-95',
                   ].join(' ')}
@@ -464,7 +463,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
           onClick={advanceQuestion}
         >
           <InfoCard state={correctState} theme="water" accentColor="#06B6D4" />
-          <button className="mt-6 font-bold text-white/70 tracking-widest text-[10px] uppercase border border-white/20 px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all animate-pulse">
+          <button className="mt-6 font-bold text-white/70 tracking-widest text-[10px] border border-white/20 px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all animate-pulse">
             Tap anywhere to continue
           </button>
         </div>

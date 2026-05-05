@@ -64,14 +64,23 @@ function AnimatedCount({ target, duration = 1200 }: { target: number; duration?:
 function StarStrip({ stars, max = 3 }: { stars: number; max?: number }) {
   return (
     <span className="flex gap-0.5" aria-label={`${stars} of ${max} stars`}>
-      {Array.from({ length: max }, (_, i) => (
-        <span 
-          key={i} 
-          className={`text-xl transition-all duration-500 delay-[${i * 100}ms] ${i < stars ? 'text-[#FF9900] scale-110 drop-shadow-[0_0_8px_rgba(255,153,0,0.5)]' : 'text-white/10 scale-90'}`}
-        >
-          ★
-        </span>
-      ))}
+      {Array.from({ length: max }, (_, i) => {
+        const isFilled = i < stars;
+        return (
+          <svg 
+            key={i}
+            viewBox="0 0 24 24" 
+            className={`w-5 h-5 transition-all duration-500 delay-[${i * 100}ms] ${
+              isFilled 
+                ? 'text-[#F59E0B] fill-[#F59E0B] scale-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                : 'text-white/10 fill-white/10 scale-90'
+            }`}
+            aria-hidden="true"
+          >
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        );
+      })}
     </span>
   );
 }
@@ -165,7 +174,7 @@ export default function ResultsPage() {
 
   return (
     <AppLayout variant="results">
-      <main className="flex-1 bg-[#2D3B2F] text-white overflow-auto pb-12 relative font-sans">
+      <main className="flex-1 bg-[#101813] text-white overflow-auto pb-12 relative font-sans">
         
         {/* Playful Cartography Background: Journal Texture */}
         <div 
@@ -180,27 +189,27 @@ export default function ResultsPage() {
         />
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <header ref={headerRef} className="px-8 pt-12 pb-8 relative z-10 text-center">
-          <div className="inline-block mb-4">
+        <header ref={headerRef} className="px-8 pt-6 pb-2 relative z-10 text-center">
+          <div className="inline-block mb-2">
              {allPassed ? (
                <div className="relative">
-                 <LottiePlayer src="assets/lottie/trophy.json" className="w-24 h-24 mx-auto" />
+                 <LottiePlayer src="assets/lottie/trophy.json" className="w-16 h-16 mx-auto" />
                  <div className="absolute inset-0 bg-[#F59E0B]/20 blur-2xl rounded-full -z-10 animate-pulse" />
                </div>
              ) : (
-               <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-4xl grayscale">
+               <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-3xl grayscale">
                  🌍
                </div>
              )}
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-white drop-shadow-lg">
+          <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-lg">
             {allPassed ? 'EXPEDITION CLEAR' : 'EXPEDITION LOG'}
           </h1>
           <div className="flex items-center justify-center gap-3 mt-4">
-            <div className="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-widest">
+            <div className="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-wider">
               Agent: {session.agent}
             </div>
-            <div className="px-3 py-1 rounded-full bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[10px] font-black uppercase tracking-widest text-[#F59E0B]">
+            <div className="px-3 py-1 rounded-full bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[10px] font-black uppercase tracking-wider text-[#F59E0B]">
               Sector: {session.waveCode || 'ALPHA-1'}
             </div>
           </div>
@@ -216,11 +225,16 @@ export default function ResultsPage() {
             <AnimatedCard
               key={item.label}
               tiltAmount={4}
-              className={`flex flex-col items-center gap-1 p-5 rounded-3xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-xl relative overflow-hidden group slide-up ${idx === 0 ? 'stagger-1' : idx === 1 ? 'stagger-2' : 'stagger-3'}`}
+              className={`flex flex-col items-center gap-0.5 p-3 rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-2xl relative overflow-hidden group slide-up ${idx === 0 ? 'stagger-1' : idx === 1 ? 'stagger-2' : 'stagger-3'}`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="text-[9px] uppercase tracking-[0.2em] font-black text-white/40 mb-1">{item.label}</span>
-              <strong className="text-3xl font-mono font-black text-white tracking-tighter relative z-10">
+              <span className="text-[9px] uppercase tracking-widest font-black text-white/60 mb-1 text-center">
+                {item.label}
+                {item.label === 'Intelligence' && (
+                  <span className="block text-[7px] opacity-60 normal-case tracking-normal mt-0.5">(Total Score)</span>
+                )}
+              </span>
+              <strong className="text-2xl font-mono font-black text-white tracking-tighter relative z-10">
                 <AnimatedCount target={item.value} />
               </strong>
               <div className="w-8 h-1 rounded-full mt-2" style={{ backgroundColor: item.accent }} />
@@ -229,14 +243,14 @@ export default function ResultsPage() {
         </div>
 
         {/* ── Level breakdown ────────────────────────────────────────────── */}
-        <div className="px-6 mt-12 relative z-10">
-          <h2 className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-black mb-6 px-1">Mission Log Entries</h2>
-          <div className="flex flex-col gap-4">
+        <div className="px-6 mt-8 relative z-10">
+          <h2 className="text-white/60 text-[11px] font-black mb-4 px-1">Mission Log Entries</h2>
+          <div className="flex flex-col gap-3">
             {session.games.map((game, index) => (
               <AnimatedCard 
                 key={game.key} 
                 tiltAmount={1} 
-                className="rounded-3xl border border-white/10 bg-black/30 p-6 hover:bg-black/50 transition-all group relative overflow-hidden"
+                className="rounded-3xl border border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.05] transition-all group relative overflow-hidden backdrop-blur-md shadow-lg"
               >
                 {game.passed && (
                   <div className="absolute top-0 right-0 p-4 opacity-[0.03] grayscale pointer-events-none group-hover:opacity-10 transition-opacity">
@@ -246,18 +260,22 @@ export default function ResultsPage() {
                 
                 <div className="flex items-start justify-between relative z-10">
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black ${game.passed ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-red-500/20 text-red-500'} border border-current/20`}>
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black ${game.passed ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-red-500/20 text-red-500'} border border-current/20`}>
                       {index + 1}
                     </div>
                     <div>
-                      <h3 className="text-white font-black text-lg tracking-tight group-hover:text-[#F59E0B] transition-colors">
+                      <h3 className="text-white font-black text-base tracking-tight group-hover:text-[#F59E0B] transition-colors">
                         {GAME_DEFINITIONS[index]?.label ?? game.label}
                       </h3>
-                      <div className="flex gap-3 mt-1">
-                        <span className="text-white/30 text-[9px] font-black uppercase tracking-widest">
-                          {game.passed ? 'SECURED' : 'UNSTABLE'}
+                      <div className="flex gap-2 mt-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest border ${
+                          game.passed 
+                            ? 'bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30' 
+                            : 'bg-red-500/20 text-red-500 border-red-500/30'
+                        }`}>
+                          {game.passed ? 'Secured' : 'Unstable'}
                         </span>
-                        <span className="text-white/20 text-[9px] font-mono">
+                        <span className="text-white/40 text-[8px] font-mono self-center">
                           ID: {game.key.toUpperCase()}
                         </span>
                       </div>
@@ -266,17 +284,17 @@ export default function ResultsPage() {
                   <StarStrip stars={game.stars} max={3} />
                 </div>
                 
-                <div className="mt-6 flex items-end justify-between relative z-10">
+                <div className="mt-4 flex items-end justify-between relative z-10">
                   <div className="flex gap-8">
                     <div className="flex flex-col">
-                      <span className="text-white/20 text-[8px] uppercase font-black tracking-widest mb-1">Intelligence</span>
+                      <span className="text-white/40 text-[8px] font-black tracking-wider mb-1">INTELLIGENCE</span>
                       <span className="text-white font-mono text-xl font-black">
                         <AnimatedCount target={game.score} />
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-white/20 text-[8px] uppercase font-black tracking-widest mb-1">Precision</span>
-                      <span className="text-white/60 font-mono text-sm">{Math.round((game.correctCount / (game.totalCount || 1)) * 100)}%</span>
+                      <span className="text-white/40 text-[8px] font-black tracking-wider mb-1">PRECISION</span>
+                      <span className="text-white/80 font-mono text-sm">{Math.round((game.correctCount / (game.totalCount || 1)) * 100)}%</span>
                     </div>
                   </div>
                   
@@ -291,9 +309,29 @@ export default function ResultsPage() {
           </div>
         </div>
 
+        {/* ── Primary Actions (Issue 9.6: Visible in viewport) ──────────────── */}
+        <div className="px-6 mt-8 flex flex-col gap-3 relative z-10 max-w-sm mx-auto">
+          {allPassed && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="w-full py-4 rounded-2xl border-2 border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B] font-black hover:bg-[#F59E0B]/20 transition-all active:scale-[0.98] text-[10px] uppercase tracking-[0.3em] shadow-xl"
+            >
+              Download Clearance
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handlePlayAgain}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#F59E0B] to-[#FEBD69] text-[#1A241C] font-black hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-2xl text-xs"
+          >
+            New Assignment
+          </button>
+        </div>
+
         {/* ── Badge recognition ──────────────────────────────────────────── */}
-        <div className="px-6 mt-16 relative z-10">
-          <h2 className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-black mb-6 px-1 text-center">Merit Matrix</h2>
+        <div className="px-6 mt-10 relative z-10">
+          <h2 className="text-white/60 text-[11px] font-black mb-6 px-1 text-center">Merit Matrix</h2>
           <div className="grid grid-cols-2 gap-4">
             {BADGE_DEFS.map((badge) => {
               const earned = session.earnedBadges.includes(badge.id);
@@ -301,20 +339,20 @@ export default function ResultsPage() {
                 <div
                   key={badge.id}
                   className={[
-                    'flex items-center gap-4 p-5 rounded-3xl border-2 transition-all duration-700',
+                    'flex items-center gap-4 p-5 rounded-3xl border-2 transition-all duration-700 backdrop-blur-sm',
                     earned
-                      ? 'border-[#F59E0B]/40 bg-[#F59E0B]/5 shadow-[0_15px_30px_rgba(245,158,11,0.1)] scale-100'
-                      : 'border-white/5 bg-white/[0.02] opacity-30 grayscale scale-95',
+                      ? 'border-[#F59E0B]/30 bg-[#F59E0B]/5 shadow-[0_15px_30px_rgba(245,158,11,0.1)] scale-100'
+                      : 'border-white/5 bg-white/[0.02] opacity-40 grayscale scale-95',
                   ].join(' ')}
                 >
-                  <div className={`text-3xl filter ${earned ? 'drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]' : ''}`}>
+                  <div className={`text-3xl filter ${earned ? 'drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]' : ''}`} aria-hidden="true">
                     {BADGE_ICONS[badge.id] ?? '⭐'}
                   </div>
                   <div className="min-w-0">
-                    <p className={`text-xs font-black uppercase tracking-widest mb-1 ${earned ? 'text-white' : 'text-white/50'}`}>
+                    <p className={`text-xs font-black uppercase tracking-wider mb-1 ${earned ? 'text-white' : 'text-white/50'}`}>
                       {badge.name}
                     </p>
-                    <p className="text-white/30 text-[9px] font-medium leading-snug">
+                    <p className="text-white/50 text-[9px] font-medium leading-snug">
                       {BADGE_DESCS[badge.id]}
                     </p>
                   </div>
@@ -326,10 +364,8 @@ export default function ResultsPage() {
 
         {/* ── Global Standings ───────────────────────────────────────────── */}
         {leaderboardRows.length > 0 && (
-          <div className="px-6 mt-16 relative z-10">
-            <h2 className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-black mb-6 px-1 text-center">Global Agent Rankings</h2>
-            <AnimatedCard tiltAmount={1} className="rounded-3xl border border-white/10 bg-black/50 overflow-hidden shadow-2xl backdrop-blur-xl">
-              <div className="grid grid-cols-6 text-white/30 text-[8px] font-black uppercase tracking-[0.3em] px-8 py-4 border-b border-white/5 bg-white/[0.03]">
+          <div className="px-6 mt-10 relative z-10">
+              <div className="grid grid-cols-6 text-white/60 text-[8px] font-black px-8 py-4 border-b border-white/10 bg-white/[0.05]">
                 <span>Rank</span>
                 <span className="col-span-2">Agent</span>
                 <span className="text-right">Stars</span>
@@ -349,37 +385,16 @@ export default function ResultsPage() {
                     <span className="font-mono text-white/20">#{String(idx + 1).padStart(2, '0')}</span>
                     <span className="col-span-2 truncate">{row.agent}</span>
                     <span className="text-right font-mono text-[#F59E0B]">{row.totalStars}</span>
-                    <span className="col-span-2 text-right font-mono text-white/40">{row.gamesPassed}/{GAME_DEFINITIONS.length}</span>
+                    <span className="col-span-2 text-right font-mono text-white/40">{`${row.gamesPassed}/${GAME_DEFINITIONS.length}`}</span>
                   </div>
                 ))}
               </div>
-            </AnimatedCard>
           </div>
         )}
 
-        {/* ── Actions ────────────────────────────────────────────────────── */}
-        <div className="px-6 mt-16 flex flex-col gap-4 relative z-10 max-w-sm mx-auto">
-          {allPassed && (
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="w-full py-5 rounded-2xl border-2 border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B] font-black hover:bg-[#F59E0B]/20 transition-all active:scale-[0.98] text-[10px] uppercase tracking-[0.3em] shadow-xl"
-            >
-              DOWNLOAD CLEARANCE
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handlePlayAgain}
-            className="w-full py-5 rounded-2xl bg-gradient-to-r from-[#F59E0B] to-[#FEBD69] text-[#2D3B2F] font-black hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-2xl text-[10px] uppercase tracking-[0.3em]"
-          >
-            NEW ASSIGNMENT
-          </button>
-          
-          <p className="text-center text-white/10 text-[8px] font-mono tracking-[0.5em] mt-4">
-            ATLAS EXPLORER // END OF LOG
-          </p>
-        </div>
+        <p className="text-center text-white/10 text-[8px] font-mono tracking-widest mt-12 mb-8">
+          ATLAS EXPLORER // END OF LOG
+        </p>
 
       </main>
     </AppLayout>

@@ -6,7 +6,7 @@ export const STORAGE_KEY = 'atlas-explorer-session';
 export const GAME_DEFINITIONS = [
   { key: 'crack', label: 'Crack the Code', maxScore: 260 },
   { key: 'pin',   label: 'Pin It!',         maxScore: 195 },
-  { key: 'sorter', label: 'City Sorter',    maxScore: 312 },
+  { key: 'sorter', label: 'Tz Sorter',      maxScore: 312 },
 ] as const;
 
 const TOTAL_REGIONS = 63;
@@ -172,7 +172,13 @@ export function saveSession(session: Session, storage: Storage = globalThis.loca
 export function loadSession(storage: Storage = globalThis.localStorage): Session | null {
   const raw = storage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  const session = JSON.parse(raw) as Partial<Session> & Record<string, unknown>;
+  let session: Partial<Session> & Record<string, unknown>;
+  try {
+    session = JSON.parse(raw) as Partial<Session> & Record<string, unknown>;
+  } catch {
+    storage.removeItem(STORAGE_KEY);
+    return null;
+  }
   session.mode = (session.mode as Session['mode']) || (session.demo ? 'demo' : 'player');
   session.demo = session.mode === 'demo' || Boolean(session.demo);
   if (!session.agent && session.name) session.agent = session.name;

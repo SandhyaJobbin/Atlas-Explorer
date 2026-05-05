@@ -118,6 +118,12 @@ export default function GameShellPage() {
     dispatch({ type: 'RETRY' });
   }
 
+  function handleExit() {
+    if (window.confirm('Are you sure you want to exit the current mission? Progress in this game will not be saved.')) {
+      navigate('/');
+    }
+  }
+
   // ── Derive top-bar props ──────────────────────────────────────────────────
 
   const currentGameIndex =
@@ -143,6 +149,8 @@ export default function GameShellPage() {
         score={totalScore}
         level={currentGameIndex + 1}
         totalLevels={totalGames}
+        attemptNumber={(session.games[currentGameIndex]?.attempts?.length ?? 0) + 1}
+        onExit={handleExit}
       />
 
       {shellState.phase === 'intro' && (

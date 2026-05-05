@@ -10,7 +10,7 @@ export default function AppLayout({ children, variant = 'default' }: AppLayoutPr
   const isGameOrResults = variant === 'game' || variant === 'results';
   
   return (
-    <div className={`h-screen flex flex-col bg-[#2D3B2F] relative transition-colors duration-700 overflow-hidden`}>
+    <div className={`h-screen flex flex-col bg-[#0c120e] relative transition-colors duration-700 overflow-hidden`}>
       
       {/* Global Topographic Overlay */}
       <div 
