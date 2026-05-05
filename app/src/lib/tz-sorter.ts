@@ -60,7 +60,6 @@ interface RawState {
   name: string;
   timezone: string;
   country: string;
-  [key: string]: unknown;
 }
 
 export function buildTzRounds(allStates: RawState[]): TzRound[] {
