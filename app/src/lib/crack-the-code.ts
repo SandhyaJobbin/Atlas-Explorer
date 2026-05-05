@@ -5,7 +5,7 @@ export const TOTAL_QUESTIONS    = 20;
 export const TIMEZONE_Q_COUNT   = 3;
 export const FALL_DURATION_MS   = 5000;
 export const SPEED_WINDOW       = 2;
-export const START_TOP          = 132; // px from top of zone
+export const START_TOP          = -120; // px from top of zone (negative = starts above)
 
 export type CodeQuestion     = { type: 'code';     state: StateEntry };
 export type TimezoneQuestion = { type: 'timezone'; state: StateEntry; choices: Timezone[] };
