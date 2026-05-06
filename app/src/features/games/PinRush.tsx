@@ -68,7 +68,7 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Question tracking ─────────────────────────────────────────────────────
-  const [results, setResults] = useState<Record<number, 'pending' | 'active' | 'found' | 'missed'>>({});
+  const [_results, setResults] = useState<Record<number, 'pending' | 'active' | 'found' | 'missed'>>({});
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {

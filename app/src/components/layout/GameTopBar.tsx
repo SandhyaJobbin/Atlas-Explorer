@@ -14,11 +14,11 @@ interface GameTopBarProps {
 }
 
 export default function GameTopBar({
-  gameLabel,
+  gameLabel: _gameLabel,
   score,
   level,
   totalLevels,
-  attemptNumber,
+  attemptNumber: _attemptNumber,
   onExit,
   isVaultOpen,
   onVaultToggle,

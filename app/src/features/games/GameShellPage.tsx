@@ -85,7 +85,7 @@ export default function GameShellPage() {
   // Reset streak when game phase changes or game index changes
   useEffect(() => {
     setStreak(0);
-  }, [shellState.phase, shellState.gameIndex]);
+  }, [shellState.phase, currentGameIndex]);
 
   // If session is already completed on mount, go straight to results
   useEffect(() => {

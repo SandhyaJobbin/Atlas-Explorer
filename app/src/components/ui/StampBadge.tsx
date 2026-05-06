@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface StampBadgeProps {
   label: string;
   type: 'success' | 'error' | 'warning' | 'info';
