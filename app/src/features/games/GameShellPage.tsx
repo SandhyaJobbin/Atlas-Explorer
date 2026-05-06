@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
 import type { GameAttempt, GameState, EarnedBadge, GameResult } from '@/types';
 import { GAME_DEFINITIONS, getTotalScore } from '@/lib/session';
 import AppLayout from '@/components/layout/AppLayout';
 import GameTopBar from '@/components/layout/GameTopBar';
+import IntelVault from '@/components/layout/IntelVault';
 import GameIntro from './GameIntro';
 import PassInterstitial from './PassInterstitial';
 import FailInterstitial from './FailInterstitial';
@@ -77,6 +78,14 @@ export default function GameShellPage() {
     phase: 'intro',
     gameIndex: initialGameIndex,
   } as ShellPhase);
+
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [streak, setStreak] = useState(0);
+
+  // Reset streak when game phase changes or game index changes
+  useEffect(() => {
+    setStreak(0);
+  }, [shellState.phase, shellState.gameIndex]);
 
   // If session is already completed on mount, go straight to results
   useEffect(() => {
@@ -151,50 +160,60 @@ export default function GameShellPage() {
         totalLevels={totalGames}
         attemptNumber={(session.games[currentGameIndex]?.attempts?.length ?? 0) + 1}
         onExit={handleExit}
+        isVaultOpen={vaultOpen}
+        onVaultToggle={() => setVaultOpen(!vaultOpen)}
+        streak={streak}
       />
 
-      {shellState.phase === 'intro' && (
-        <GameIntro
-          gameIndex={shellState.gameIndex}
-          game={session.games[shellState.gameIndex]}
-          clearedCount={clearedCount}
-          totalGames={totalGames}
-          onStart={(isRetry) =>
-            dispatch({ type: 'START', gameIndex: shellState.gameIndex, isRetry })
-          }
-        />
-      )}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-auto relative">
+          {shellState.phase === 'intro' && session.games[shellState.gameIndex] && (
+            <GameIntro
+              gameIndex={shellState.gameIndex}
+              game={session.games[shellState.gameIndex]}
+              clearedCount={clearedCount}
+              totalGames={totalGames}
+              onStart={(isRetry) =>
+                dispatch({ type: 'START', gameIndex: shellState.gameIndex, isRetry })
+              }
+            />
+          )}
 
-      {shellState.phase === 'playing' && (() => {
-        const GameComponent = GAME_COMPONENTS[shellState.gameIndex];
-        if (!GameComponent) return null;
-        return (
-          <GameComponent
-            key={`${shellState.gameIndex}-${shellState.isRetry}`}
-            isRetry={shellState.isRetry}
-            onComplete={(result) => handleGameComplete(shellState.gameIndex, result)}
-          />
-        );
-      })()}
+          {shellState.phase === 'playing' && (() => {
+            const GameComponent = GAME_COMPONENTS[shellState.gameIndex];
+            if (!GameComponent) return null;
+            return (
+              <GameComponent
+                key={`${shellState.gameIndex}-${shellState.isRetry}`}
+                isRetry={shellState.isRetry}
+                onComplete={(result) => handleGameComplete(shellState.gameIndex, result)}
+                onStreakChange={setStreak}
+              />
+            );
+          })()}
 
-      {shellState.phase === 'pass' && (
-        <PassInterstitial
-          gameLabel={shellState.outcome.game.label}
-          attempt={shellState.outcome.attempt}
-          isFinalMission={shellState.outcome.sessionCompleted}
-          newBadges={shellState.outcome.newBadges}
-          onContinue={handleContinue}
-        />
-      )}
+          {shellState.phase === 'pass' && (
+            <PassInterstitial
+              gameLabel={shellState.outcome.game.label}
+              attempt={shellState.outcome.attempt}
+              isFinalMission={shellState.outcome.sessionCompleted}
+              newBadges={shellState.outcome.newBadges}
+              onContinue={handleContinue}
+            />
+          )}
 
-      {shellState.phase === 'fail' && (
-        <FailInterstitial
-          gameLabel={shellState.outcome.game.label}
-          attempt={shellState.outcome.attempt}
-          allAttempts={shellState.outcome.game.attempts}
-          onRetry={handleRetry}
-        />
-      )}
+          {shellState.phase === 'fail' && (
+            <FailInterstitial
+              gameLabel={shellState.outcome.game.label}
+              attempt={shellState.outcome.attempt}
+              allAttempts={shellState.outcome.game.attempts}
+              onRetry={handleRetry}
+            />
+          )}
+        </div>
+        
+        <IntelVault isOpen={vaultOpen} onClose={() => setVaultOpen(false)} />
+      </div>
     </AppLayout>
   );
 }

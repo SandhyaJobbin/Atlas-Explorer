@@ -126,5 +126,6 @@ export interface GameResult {
 
 export interface GameProps {
   onComplete: (result: GameResult) => void;
+  onStreakChange?: (streak: number) => void;
   isRetry: boolean;
 }

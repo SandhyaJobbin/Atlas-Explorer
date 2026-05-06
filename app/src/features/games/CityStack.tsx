@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import type { GameProps, StateEntry } from '@/types';
 import { useAudio } from '@/hooks/useAudio';
 import InfoCard from '@/components/ui/InfoCard';
@@ -19,6 +19,8 @@ import {
   TIME_PER_ROUND,
   TOTAL_CORRECT,
 } from '@/lib/tz-sorter';
+import StampBadge from '@/components/ui/StampBadge';
+import RollingNumber from '@/components/ui/RollingNumber';
 
 // ─── Card state ────────────────────────────────────────────────────────────────
 
@@ -26,7 +28,7 @@ type CardStatus = 'idle' | 'correct' | 'wrong';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) {
+export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   const { triggerScore, ScorePopups } = useScorePopups();
@@ -47,6 +49,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
   const [correctState, setCorrectState] = useState<StateEntry | null>(null);
   const [_finished,    setFinished]     = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [showStamp,    setShowStamp]    = useState<'VERIFIED' | 'FRAUDULENT' | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const timerRef          = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -112,6 +115,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
 
     if (correctInRound >= BUCKETS_PER_ROUND * STATES_PER_BUCKET) {
       playSound('pass');
+      setShowStamp('VERIFIED');
     }
 
     correctCntRef.current += correctInRound;
@@ -134,6 +138,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
           streakPeak:   streakPeakRef.current,
         });
       } else {
+        setShowStamp(null);
         setRi(nextRi);
       }
     }, 1500);
@@ -157,7 +162,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
     delete (e.currentTarget as HTMLElement).dataset.hover;
   }
 
-  function placeCard(cardId: string, timezone: string, targetEl?: HTMLElement) {
+  const placeCard = useCallback((cardId: string, timezone: string, targetEl?: HTMLElement) => {
     if (finishedRef.current) return;
 
     const currentRound = rounds[ri];
@@ -196,6 +201,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
       if (streakRef.current >= 3) playSound('streak');
       if (streakRef.current > streakPeakRef.current) streakPeakRef.current = streakRef.current;
       setStreak(streakRef.current);
+      onStreakChange?.(streakRef.current);
 
       const totalStates = BUCKETS_PER_ROUND * STATES_PER_BUCKET;
       if (placedRef.current.size === totalStates) {
@@ -206,14 +212,17 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
       playSound('wrong');
       streakRef.current = 0;
       setStreak(0);
+      onStreakChange?.(0);
       setCardStatus((prev) => ({ ...prev, [cardId]: 'wrong' }));
+      setShowStamp('FRAUDULENT');
       setTimeout(() => {
         setCardStatus((prev) => ({ ...prev, [cardId]: 'idle' }));
-      }, 400);
+        setShowStamp(null);
+      }, 1000);
     }
 
     setSelectedCard(null);
-  }
+  }, [rounds, ri, bucketPlaced, states, onStreakChange, playSound, triggerBurst, triggerScore]);
 
   function onDrop(e: React.DragEvent, timezone: string) {
     e.preventDefault();
@@ -296,19 +305,19 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
         <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.05] border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-md">
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Points</span>
-            <strong className="text-white font-mono text-xl leading-none">{score.toLocaleString()}</strong>
+            <RollingNumber value={score} className="text-white font-mono text-xl leading-none" />
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
             <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
-              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-[#10B981]'}`}>
+              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] animate-glow-pulse' : 'text-[#10B981]'}`}>
                 {streak}x
               </strong>
               {streak >= 5 && (
                 <img
                   src={publicAsset('/assets/stickers/fire.gif')}
-                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none"
+                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none animate-glow-pulse"
                   alt=""
                 />
               )}
@@ -353,7 +362,7 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
         tiltAmount={1}
         className="flex flex-wrap gap-3 justify-center min-h-[100px] p-5 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl relative z-10"
       >
-        {trayStates.map((card) => (
+        {trayStates.map((card, i) => (
           <StateCardTile
             key={card.id}
             card={card}
@@ -362,6 +371,8 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
             onDragStart={onDragStart}
             onTap={() => setSelectedCard(selectedCard === card.id ? null : card.id)}
             states={states}
+            className="animate-stagger-in"
+            style={{ animationDelay: `${i * 0.05}s` }}
           />
         ))}
         {trayStates.length === 0 && (
@@ -398,6 +409,16 @@ export default function CityStack({ onComplete, isRetry: _isRetry }: GameProps) 
         </div>
       )}
 
+      {/* Stamp Feedback Overlay */}
+      {showStamp && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
+          <StampBadge 
+            label={showStamp} 
+            type={showStamp === 'VERIFIED' ? 'success' : 'error'} 
+          />
+        </div>
+      )}
+
       {/* Forest Watercolor Accent */}
       <div
         className="watercolor-splash left-[-40px] top-[-40px]"
@@ -424,6 +445,8 @@ function StateCardTile({
   onDragStart,
   onTap,
   states,
+  className,
+  style,
 }: {
   card: StateCard;
   status: CardStatus;
@@ -431,6 +454,8 @@ function StateCardTile({
   onDragStart: (e: React.DragEvent, id: string) => void;
   onTap: () => void;
   states: StateEntry[];
+  className?: string;
+  style?: React.CSSProperties;
 }) {
   const stateEntry = states.find((s) => s.code === card.code);
   const isCA = card.country === 'CA';
@@ -448,9 +473,11 @@ function StateCardTile({
           : status === 'wrong'
           ? 'bg-[#EF4444]/20 border-[#EF4444]/50 text-[#EF4444] animate-shake'
           : isSelected
-          ? 'bg-cyan-500/20 border-cyan-400 ring-2 ring-cyan-400 text-white hover:-translate-y-1'
+          ? 'bg-cyan-500/20 border-cyan-400 ring-2 ring-cyan-400 text-white translate-x-2 selection-glow'
           : 'bg-white/[0.07] border-white/15 text-white hover:border-white/30 hover:bg-white/[0.12] hover:-translate-y-1 active:cursor-grabbing',
+        className
       ].join(' ')}
+      style={style}
     >
       {/* Mini state silhouette */}
       {stateEntry && (
@@ -550,7 +577,7 @@ function TzBucketZone({
             return (
               <div
                 key={card.id}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 border animate-in zoom-in duration-300"
+                className="flex items-center gap-2 rounded-xl px-3 py-2 border animate-in zoom-in duration-300 animate-green-sweep"
                 style={{
                   backgroundColor: `${tzColor}22`,
                   borderColor: `${tzColor}44`,

@@ -36,7 +36,8 @@
       "Bash(npx playwright:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/Atlas-Explorer/)",
       "Bash(npx tsx:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

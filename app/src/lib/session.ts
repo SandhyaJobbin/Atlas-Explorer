@@ -198,21 +198,21 @@ export function loadSession(storage: Storage = globalThis.localStorage): Session
     };
   }
 
+  const defaultStates = makeGameStates();
   const legacyGames = (session.games as Partial<GameState>[]) || [];
   session.games = GAME_DEFINITIONS.map((definition, index) => {
-    const game =
+    const legacyGame =
       legacyGames.find((candidate) => candidate?.key === definition.key) ||
       legacyGames[index] ||
       {};
-    const attempts = Array.isArray(game.attempts) ? game.attempts : [];
+    const attempts = Array.isArray(legacyGame.attempts) ? legacyGame.attempts : [];
     return {
-      streakPeak: 0,
-      attemptNumber: attempts.length,
-      earnedBadges: [],
-      ...game,
+      ...defaultStates[index],
+      ...legacyGame,
       key: definition.key,
       label: definition.label,
       attempts,
+      attemptNumber: attempts.length,
     } as GameState;
   });
   session.currentGameIndex = Math.min(
@@ -242,4 +242,29 @@ function applyFinalAttempt(game: GameState, attempt: ReturnType<typeof normalize
   game.passed = Boolean(attempt.passed);
   game.attemptNumber = attempt.attemptNumber;
   game.completed = true;
+}
+
+// ─── Rank Logic ───────────────────────────────────────────────────────────────
+
+export type Rank = 'Trainee' | 'Specialist' | 'Lead Analyst' | 'Master Screener';
+
+export const RANK_THRESHOLDS = [
+  { rank: 'Master Screener' as Rank, min: 600, icon: '🛡️' },
+  { rank: 'Lead Analyst' as Rank,    min: 400, icon: '⚖️' },
+  { rank: 'Specialist' as Rank,      min: 200, icon: '🔍' },
+  { rank: 'Trainee' as Rank,         min: 0,   icon: '📁' },
+];
+
+export function getRank(score: number): Rank {
+  for (const t of RANK_THRESHOLDS) {
+    if (score >= t.min) return t.rank;
+  }
+  return 'Trainee';
+}
+
+export function getRankInfo(score: number) {
+  for (const t of RANK_THRESHOLDS) {
+    if (score >= t.min) return t;
+  }
+  return RANK_THRESHOLDS[RANK_THRESHOLDS.length - 1];
 }

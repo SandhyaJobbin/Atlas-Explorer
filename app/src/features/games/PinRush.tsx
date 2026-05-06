@@ -1,25 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameProps, StateEntry } from '@/types';
 import InteractiveMap from '@/components/map/InteractiveMap';
-import InfoCard from '@/components/ui/InfoCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { useAudio } from '@/hooks/useAudio';
 import { publicAsset } from '@/lib/assets';
 import { useScorePopups } from '@/components/ui/ScorePopup';
-import StateOutline from '@/components/map/StateOutline';
-import { TZ_FILLS } from '@/lib/timezones';
 import {
   pickPinQuestions,
   checkMapClick,
   checkTimezoneClick,
   calculatePoints,
-  isMapQuestion,
   type PinQuestion,
   TOTAL_QUESTIONS,
   TIME_PER_QUESTION,
   SPEED_WINDOW,
 } from '@/lib/pin-it';
+import StampBadge from '@/components/ui/StampBadge';
+import Typewriter from '@/components/ui/Typewriter';
 
 // ─── Timezone badge colours ───────────────────────────────────────────────────
 
@@ -28,7 +26,7 @@ const TZ_BG: Record<string, string> = {
   MST: '#F97316',
   CST: '#22C55E',
   EST: '#A855F7',
-  AKST:'#0EA5E9',
+  AKST: '#0EA5E9',
   HST: '#EC4899',
   AST: '#14B8A6',
   NST: '#EF4444',
@@ -40,35 +38,34 @@ function tzBg(tz: string) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
+export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   const { triggerScore, ScorePopups } = useScorePopups();
-  
+
   // ── Data ──────────────────────────────────────────────────────────────────
-  const [states,    setStates]    = useState<StateEntry[]>([]);
+  const [states, setStates] = useState<StateEntry[]>([]);
   const [questions, setQuestions] = useState<PinQuestion[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
 
   // ── Game state ────────────────────────────────────────────────────────────
-  const [qi,           setQi]           = useState(0);
-  const [score,        setScore]        = useState(0);
-  const [streak,       setStreak]       = useState(0);
-  const [timeLeft,     setTimeLeft]     = useState(TIME_PER_QUESTION);
-  const [locked,       setLocked]       = useState(false);
-  const [correctCode,  setCorrectCode]  = useState<string | null>(null);
-  const [wrongCode,    setWrongCode]    = useState<string | null>(null);
-  const [correctState, setCorrectState] = useState<StateEntry | null>(null);
+  const [qi, setQi] = useState(0);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
+  const [locked, setLocked] = useState(false);
+  const [correctCode, setCorrectCode] = useState<string | null>(null);
+  const [wrongCode, setWrongCode] = useState<string | null>(null);
+  const [showStamp, setShowStamp] = useState<'VERIFIED' | 'FRAUDULENT' | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const startedAtRef    = useRef(0);
-  const timerRef        = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const scoreRef        = useRef(0);
-  const correctCntRef   = useRef(0);
-  const streakRef       = useRef(0);
-  const streakPeakRef   = useRef(0);
-  const containerRef    = useRef<HTMLDivElement>(null);
-  const scrollRef       = useRef<HTMLDivElement>(null);
+  const startedAtRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const scoreRef = useRef(0);
+  const correctCntRef = useRef(0);
+  const streakRef = useRef(0);
+  const streakPeakRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Question tracking ─────────────────────────────────────────────────────
   const [results, setResults] = useState<Record<number, 'pending' | 'active' | 'found' | 'missed'>>({});
@@ -91,7 +88,6 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
     setLocked(false);
     setCorrectCode(null);
     setWrongCode(null);
-    setCorrectState(null);
     setTimeLeft(TIME_PER_QUESTION);
     startedAtRef.current = Date.now();
 
@@ -111,14 +107,6 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
     // Update results status
     setResults(prev => ({ ...prev, [qi]: 'active' }));
-
-    // Scroll active card into view
-    if (scrollRef.current) {
-      const activeCard = scrollRef.current.querySelector(`[data-index="${qi}"]`);
-      if (activeCard) {
-        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
 
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [qi, loading, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -144,9 +132,9 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
     pendingClickRef.current = undefined;
     if (timerRef.current) clearInterval(timerRef.current);
 
-    const q        = questions[qi];
-    const elapsed  = (Date.now() - startedAtRef.current) / 1000;
-    let isCorrect  = false;
+    const q = questions[qi];
+    const elapsed = (Date.now() - startedAtRef.current) / 1000;
+    let isCorrect = false;
 
     if (q.type === 'map') {
       isCorrect = clickedCode ? checkMapClick(q.state.code, clickedCode) : false;
@@ -160,17 +148,11 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
     if (isCorrect) {
       playSound('correct');
       triggerBurst(null, 'sand-burst');
+      setShowStamp('VERIFIED');
       if (streakRef.current + 1 >= 3) playSound('streak');
-      
-      // Phase 2: Set correct state to show info card
-      if (q.type === 'map') {
-        setCorrectState(q.state);
-      } else if (clickedCode) {
-        const state = states.find(s => s.code === clickedCode);
-        if (state) setCorrectState(state);
-      }
     } else {
       playSound('wrong');
+      setShowStamp('FRAUDULENT');
     }
 
     const pts = calculatePoints(isCorrect, elapsed, SPEED_WINDOW);
@@ -187,19 +169,21 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
     setScore(scoreRef.current);
     setStreak(streakRef.current);
+    onStreakChange?.(streakRef.current);
     setResults(prev => ({ ...prev, [qi]: isCorrect ? 'found' : 'missed' }));
 
     setTimeout(() => {
       const next = qi + 1;
       if (next >= TOTAL_QUESTIONS) {
         onComplete({
-          score:        scoreRef.current,
+          score: scoreRef.current,
           correctCount: correctCntRef.current,
-          totalCount:   TOTAL_QUESTIONS,
-          streakPeak:   streakPeakRef.current,
-          timerRatio:   timeLeft / TIME_PER_QUESTION,
+          totalCount: TOTAL_QUESTIONS,
+          streakPeak: streakPeakRef.current,
+          timerRatio: timeLeft / TIME_PER_QUESTION,
         });
       } else {
+        setShowStamp(null);
         setQi(next);
       }
     }, isCorrect ? 3000 : 1200);
@@ -223,8 +207,8 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const currentQ    = questions[qi];
-  const timerPct    = (timeLeft / TIME_PER_QUESTION) * 100;
+  const currentQ = questions[qi];
+  const timerPct = (timeLeft / TIME_PER_QUESTION) * 100;
   const timerDanger = timerPct < 30;
   const timerUrgent = timerPct < 30 && timeLeft > 0 && !locked;
 
@@ -253,11 +237,11 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
   return (
     <main ref={containerRef} className="flex-1 flex flex-col bg-[#18120e] p-3 gap-2 overflow-hidden relative">
-      
+
       {/* Thematic Background: Desert Expedition (Performance Optimized) */}
-      <div 
+      <div
         className="absolute inset-0 w-full h-full object-cover opacity-[0.12] pointer-events-none z-0 animate-ambient-float"
-        style={{ 
+        style={{
           backgroundImage: `url(${publicAsset('/assets/generated/poster-desert.png')})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
@@ -265,9 +249,9 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
       />
 
       {/* Terrain Pattern Overlay: Dot Grid */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.06]" 
-        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/dots-pattern.png')}")`, backgroundSize: '200px' }} 
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.06]"
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/dots-pattern.png')}")`, backgroundSize: '200px' }}
       />
 
       {/* Timer Urgency Vignette */}
@@ -289,7 +273,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
             </span>
           </div>
         </div>
-        
+
         <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.04] border border-white/10 px-6 py-2.5 rounded-2xl backdrop-blur-md">
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">POINTS</span>
@@ -303,10 +287,10 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
                 {streak}x
               </strong>
               {streak >= 5 && (
-                <img 
-                  src={publicAsset('/assets/stickers/fire.gif')} 
-                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none" 
-                  alt="" 
+                <img
+                  src={publicAsset('/assets/stickers/fire.gif')}
+                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none"
+                  alt=""
                 />
               )}
             </div>
@@ -340,22 +324,13 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
 
       {/* Map area container */}
       <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/5 bg-white/[0.02] backdrop-blur-md shadow-2xl mt-1">
-        {/* Radar sweep (Golden tint) */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10 opacity-20"
-          style={{
-            background: 'conic-gradient(from 0deg, transparent 70%, rgba(245,158,11,0.15) 100%)',
-            animation: 'pin-radar 4s linear infinite',
-            transformOrigin: '50% 50%',
-          }}
-        />
 
         {/* Prompt bubble with animation */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <div className="bg-[#2D3B2F]/95 border border-[#F59E0B]/50 backdrop-blur-xl rounded-2xl px-8 py-4 shadow-[0_15px_40px_rgba(0,0,0,0.6)] animate-in zoom-in duration-300">
             <span className="text-[#F59E0B] text-[10px] uppercase tracking-wider font-black block mb-1 text-center">Satellite Target</span>
             <span className="text-white text-xl font-black tracking-tight text-center block">
-              {prompt}
+              <Typewriter key={prompt} text={prompt} delay={0.05} />
             </span>
           </div>
         </div>
@@ -363,9 +338,9 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         {/* Timezone badge (for tz questions) */}
         {currentQ?.type === 'timezone' && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-            <div 
+            <div
               className="px-6 py-2 rounded-full text-white text-[10px] font-black shadow-2xl border-2 border-white/10 animate-in slide-in-from-bottom duration-500 uppercase tracking-wider"
-              style={{ 
+              style={{
                 background: `linear-gradient(135deg, ${tzBg(currentQ.timezone)}, rgba(0,0,0,0.4))`,
                 backdropFilter: 'blur(12px)'
               }}
@@ -386,7 +361,7 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
             ].join(' ')}
           >
             <InteractiveMap
-              onRegionClick={locked ? () => {} : onRegionClick}
+              onRegionClick={locked ? () => { } : onRegionClick}
               highlightedCodes={correctCode ? [correctCode] : []}
               activeCode={wrongCode}
               correctCode={correctCode}
@@ -397,114 +372,66 @@ export default function PinRush({ onComplete, isRetry: _isRetry }: GameProps) {
         </div>
       </div>
 
-      {/* Compact State Card Strip */}
-      <div className="relative z-10 -mx-3 px-3 flex-shrink-0">
-        <div 
-          ref={scrollRef}
-          className="flex gap-2 overflow-x-auto pb-2 pt-1 scrollbar-hide no-scrollbar"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {questions.map((q, index) => {
-            if (!isMapQuestion(q)) return null;
-            const status = results[index] || 'pending';
-            const isActive = index === qi;
-            const isFound = status === 'found';
-            const isMissed = status === 'missed';
-            
-            const fill = isFound 
-              ? TZ_FILLS[q.state.timezone] 
-              : (isActive ? '#F59E0B' : 'rgba(255,255,255,0.15)');
-            
-            const isCA = q.state.country === 'CA';
-
+      {/* Milestone Badges & Skip */}
+      <div className="relative z-10 flex items-center justify-between px-2 py-2 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          {[
+            { count: 5, label: 'Scout', icon: '⛺' },
+            { count: 10, label: 'Pathfinder', icon: '🧭' },
+            { count: 15, label: 'Explorer', icon: '🗺️' },
+          ].map((badge) => {
+            const earned = correctCntRef.current >= badge.count;
             return (
               <div
-                key={index}
-                data-index={index}
-                className={[
-                  'flex-shrink-0 flex items-center gap-2.5 rounded-xl border transition-all duration-300 overflow-hidden relative',
-                  isActive ? 'border-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.25)] bg-white/10 pl-2 pr-3 py-1.5' : 'border-white/5 bg-black/20 px-2.5 py-1.5',
-                  isFound ? 'bg-white/[0.08]' : '',
-                  isMissed ? 'border-red-500/30 grayscale opacity-50' : '',
-                  !isActive && !isFound && !isMissed ? 'opacity-40' : ''
-                ].join(' ')}
-                style={{ 
-                  scrollSnapAlign: 'center',
-                  borderColor: isFound ? `${fill}60` : undefined,
-                }}
+                key={badge.count}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-500 ${earned
+                    ? 'bg-[#F59E0B]/15 border-[#F59E0B]/50 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                    : 'bg-white/5 border-white/10 opacity-40 grayscale'
+                  }`}
               >
-                {/* Mini State Outline */}
-                <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center relative">
-                  {isActive && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-12 h-12 bg-[#F59E0B]/20 rounded-full blur-lg animate-pulse" />
-                    </div>
-                  )}
-                  <StateOutline 
-                    stateCode={q.state.code} 
-                    className={`w-full h-full transition-all duration-500 ${isActive ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' : ''}`}
-                    fill={fill}
-                    stroke={isFound || isActive ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)'}
-                    strokeWidth={isActive ? 2 : 1.5}
-                  />
-                </div>
-
-                {/* Name & Status */}
-                <div className="flex flex-col min-w-0 leading-tight">
-                  <span className={`text-[11px] font-black truncate max-w-[90px] ${isActive ? 'text-white' : 'text-white/60'}`}>{q.state.name}</span>
-                  <span className="text-[9px] font-mono text-[#F59E0B] font-bold tracking-wider">{q.state.code}</span>
-                </div>
-
-                {/* Status badge */}
-                {isFound && (
-                  <span 
-                    className="text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter flex-shrink-0"
-                    style={{ backgroundColor: fill }}
-                  >
-                    {q.state.timezone}
+                <span className="text-xl">{badge.icon}</span>
+                <div className="flex flex-col leading-tight">
+                  <span className={`text-[9px] font-black uppercase tracking-wider ${earned ? 'text-[#F59E0B]' : 'text-white/40'}`}>
+                    {badge.label}
                   </span>
-                )}
-                {isFound && <span className="text-[10px] flex-shrink-0">{isCA ? '🇨🇦' : '🇺🇸'}</span>}
-                {isMissed && <span className="bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase flex-shrink-0">✗</span>}
-                {isActive && (
-                  <button
-                    onClick={handleSkip}
-                    className="flex-shrink-0 bg-[#F59E0B] hover:bg-[#FFB12B] text-[#2D3B2F] text-[9px] font-black px-3 py-1.5 rounded-lg border-b-2 border-[#B47B00] transition-all shadow-md active:border-b-0 active:translate-y-0.5"
-                  >
-                    Skip Target
-                  </button>
-                )}
-                {!isActive && !isFound && !isMissed && (
-                  <div className="flex gap-0.5 flex-shrink-0">
-                    <div className="w-1 h-1 rounded-full bg-white/10" />
-                    <div className="w-1 h-1 rounded-full bg-white/10" />
-                    <div className="w-1 h-1 rounded-full bg-white/10" />
-                  </div>
-                )}
+                  <span className={`text-[8px] font-bold ${earned ? 'text-white/60' : 'text-white/20'}`}>
+                    {badge.count} found
+                  </span>
+                </div>
               </div>
             );
           })}
         </div>
+        {!locked && (
+          <button
+            onClick={handleSkip}
+            className="bg-[#F59E0B] hover:bg-[#FFB12B] text-[#2D3B2F] text-[10px] font-black px-4 py-2 rounded-lg border-b-2 border-[#B47B00] transition-all shadow-md active:border-b-0 active:translate-y-0.5"
+          >
+            Skip Target
+          </button>
+        )}
       </div>
 
-      {/* Info Card Overlay */}
-      {correctState && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-orange-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <InfoCard state={correctState} theme="desert" accentColor="#F59E0B" />
+      {/* Stamp Feedback Overlay */}
+      {showStamp && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
+          <StampBadge
+            label={showStamp}
+            type={showStamp === 'VERIFIED' ? 'success' : 'error'}
+          />
         </div>
       )}
 
       {/* Desert Watercolor Accent */}
-      <div 
-        className="watercolor-splash right-[-50px] top-[-50px]" 
-        style={{ backgroundImage: `url("${publicAsset('/assets/illustrations/splash-desert.png')}")` }} 
+      <div
+        className="watercolor-splash right-[-50px] top-[-50px]"
+        style={{ backgroundImage: `url("${publicAsset('/assets/illustrations/splash-desert.png')}")` }}
       />
 
       {/* Decoration */}
       <img src={publicAsset('/assets/illustrations/cactus.svg')} className="absolute bottom-8 left-8 w-14 h-14 opacity-15 pointer-events-none grayscale sepia" alt="" />
-      
+
       <style>{`
-        @keyframes pin-radar { 100% { transform: rotate(360deg); } }
         .atlas-region { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
         [id^="div"] { display: none !important; }
       `}</style>

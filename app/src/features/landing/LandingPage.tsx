@@ -286,7 +286,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 pt-4">
+                <div className="flex flex-col gap-3 pt-4 pb-12">
                   <button
                     type="submit"
                     disabled={!formValid}

@@ -18,9 +18,12 @@ import {
   START_TOP,
 } from '@/lib/crack-the-code';
 
+import Typewriter from '@/components/ui/Typewriter';
+import RollingNumber from '@/components/ui/RollingNumber';
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
+export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   const { triggerScore, ScorePopups } = useScorePopups();
@@ -39,6 +42,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
   const [blockVisible, setBlockVisible] = useState(false);
   const [blockLocked,  setBlockLocked]  = useState(false);
   const [wrongFlash,   setWrongFlash]   = useState(false);
+
   const [correctState, setCorrectState] = useState<StateEntry | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
@@ -139,6 +143,19 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
     return cancel;
   }, [qi, loading, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fix 6: Enter Key to Dismiss Info Card
+  useEffect(() => {
+    if (!correctState) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        setCorrectState(null);
+        advanceQuestion();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [correctState]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-focus input each question
   useEffect(() => {
     if (!locked && !loading) inputRef.current?.focus();
@@ -178,6 +195,8 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
     streakRef.current       = newStreak;
     streakPeakRef.current   = newPeak;
 
+    onStreakChange?.(newStreak);
+
     if (newStreak >= 3) playSound('streak');
 
     // Trigger score popup
@@ -192,6 +211,7 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
     setStreak(newStreak);
     setBlockLocked(true);
     setLocked(true);
+
     setCorrectState(questions[qi].state);
 
     if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
@@ -211,8 +231,12 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
       playSound('wrong');
       setInputVal('');
       inputValRef.current = '';
+      streakRef.current = 0;
+      onStreakChange?.(0);
       setWrongFlash(true);
-      setTimeout(() => setWrongFlash(false), 350);
+      setTimeout(() => {
+        setWrongFlash(false);
+      }, 1000);
     }
   }
 
@@ -227,7 +251,9 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
     } else {
       playSound('wrong');
       setWrongFlash(true);
-      setTimeout(() => setWrongFlash(false), 350);
+      setTimeout(() => {
+        setWrongFlash(false);
+      }, 1000);
     }
   }
 
@@ -293,19 +319,19 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
         <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.05] border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-md">
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">POINTS</span>
-            <strong className="text-white font-mono text-xl leading-none">{score.toLocaleString()}</strong>
+            <RollingNumber value={score} className="text-white font-mono text-xl leading-none" />
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
             <span className="text-white/30 text-[8px] font-black tracking-widest mb-0.5">STREAK</span>
             <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
-              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'text-[#06B6D4]'}`}>
+              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] animate-glow-pulse' : 'text-[#06B6D4]'}`}>
                 {streak}x
               </strong>
               {streak >= 5 && (
                 <img 
                   src={publicAsset('/assets/stickers/fire.gif')} 
-                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none" 
+                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none animate-glow-pulse" 
                   alt="" 
                 />
               )}
@@ -320,11 +346,13 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
           <span className="text-[#06B6D4]">Depth: {qi + 1} <span className="text-white/20">/</span> {TOTAL_QUESTIONS}</span>
           <span className="text-white/30">{progress}%</span>
         </div>
-        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden shadow-inner border border-white/10">
+        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden shadow-inner border border-white/10 mission-progress-bar">
           <div
-            className="h-full bg-gradient-to-r from-[#06B6D4] to-[#22C55E] transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+            className="h-full bg-gradient-to-r from-[#06B6D4] to-[#22C55E] transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)] relative"
             style={{ width: `${progress}%` }}
-          />
+          >
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
+          </div>
         </div>
       </div>
 
@@ -350,7 +378,11 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
           >
             <span className="block text-[#06B6D4] text-[10px] uppercase tracking-wider font-bold mb-2 text-center">Cipher Signal</span>
             <span className="block font-black text-3xl tracking-tight text-center">
-              {blockLocked ? 'Secured' : currentQ.state.name}
+              {blockLocked ? (
+                <Typewriter text="Secured" delay={0.05} />
+              ) : (
+                <Typewriter key={currentQ.state.name} text={currentQ.state.name} delay={0.05} />
+              )}
             </span>
             {!blockLocked && (
               <div className="mt-3 flex items-center justify-center gap-2">
@@ -427,40 +459,49 @@ export default function CodeDrop({ onComplete, isRetry: _isRetry }: GameProps) {
                 locked || inputVal.length < 2
                   ? 'border-white/10 bg-white/5 text-white/30 cursor-not-allowed'
                   : 'border-[#06B6D4]/50 bg-[#06B6D4]/20 text-[#06B6D4] hover:bg-[#06B6D4]/30 hover:shadow-[0_0_25px_rgba(6,182,212,0.3)]',
+                locked && 'animate-transmitting'
               ].join(' ')}
             >
-              {locked ? 'Secured' : inputVal.length < 2 ? 'Type the code' : 'Commit Key'}
+              {locked ? 'Transmitting...' : inputVal.length < 2 ? 'Type the code' : 'Commit Key'}
             </button>
           </form>
         ) : currentQ?.type === 'timezone' ? (
           <div className="space-y-4">
             <div className="text-[9px] font-black text-white/30 uppercase tracking-widest text-center">Sector Sync Protocol</div>
             <div className={`grid grid-cols-2 gap-4 ${wrongFlash ? 'animate-shake' : ''}`}>
-              {currentQ.choices.map((tz) => (
-                <button
-                  key={tz}
-                  disabled={locked}
-                  onClick={() => handleTimezoneChoice(tz)}
-                  className={[
-                    'rounded-2xl border-2 px-6 py-4 font-black text-sm tracking-wider transition-all duration-300 relative overflow-hidden group',
-                    'bg-white/[0.05] border-white/10 text-white hover:border-[#06B6D4]/50 hover:bg-[#06B6D4]/10',
-                    locked ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.03] active:scale-95',
-                  ].join(' ')}
-                >
-                  <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="relative z-10">{tz}</span>
-                </button>
-              ))}
+              {currentQ.choices.map((tz, i) => {
+                const isCorrect = correctState && tz === currentQ.state.timezone;
+                return (
+                  <button
+                    key={tz}
+                    disabled={locked}
+                    onClick={() => handleTimezoneChoice(tz)}
+                    className={[
+                      'rounded-2xl border-2 px-6 py-4 font-black text-sm tracking-wider transition-all duration-300 relative overflow-hidden group',
+                      isCorrect 
+                        ? 'bg-[#10B981]/20 border-[#10B981] text-white animate-green-sweep' 
+                        : 'bg-white/[0.05] border-white/10 text-white hover:border-[#06B6D4]/50 hover:bg-[#06B6D4]/10',
+                      locked && !isCorrect ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.03] active:scale-95 animate-stagger-in hover:translate-x-2 selection-glow',
+                    ].join(' ')}
+                    style={{ animationDelay: `${i * 0.1}s` }}
+                  >
+                    <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="relative z-10">{tz}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : null}
       </AnimatedCard>
 
+
+
       {/* Info Card Overlay */}
       {correctState && (
         <div 
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-cyan-900/40 backdrop-blur-sm animate-in fade-in duration-300"
-          onClick={advanceQuestion}
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-cyan-900/60 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => { setCorrectState(null); advanceQuestion(); }}
         >
           <InfoCard state={correctState} theme="water" accentColor="#06B6D4" />
           <button className="mt-6 font-bold text-white/70 tracking-widest text-[10px] border border-white/20 px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all animate-pulse">

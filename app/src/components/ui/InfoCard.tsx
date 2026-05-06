@@ -51,8 +51,8 @@ export default function InfoCard({ state, accentColor, theme = 'generic' }: Info
             <p className="font-bold text-gray-800">{state.capital}</p>
           </div>
           <div>
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Coast</p>
-            <p className="font-bold text-gray-800">{state.coast}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Country</p>
+            <p className="font-bold text-gray-800">{state.country === 'CA' ? 'Canada (CA)' : 'United States (US)'}</p>
           </div>
         </div>
         

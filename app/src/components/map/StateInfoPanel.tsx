@@ -1,12 +1,7 @@
 import type { StateEntry } from '@/types';
 import { publicAsset } from '@/lib/assets';
 import { useMemo } from 'react';
-import { TZ_COLORS } from '@/lib/timezones';
 
-const FLAG: Record<'US' | 'CA', string> = {
-  US: '🇺🇸',
-  CA: '🇨🇦',
-};
 
 const COUNTRY_THEME = {
   US: {
@@ -34,7 +29,6 @@ interface StateInfoPanelProps {
 
 export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) {
   if (!state) return null;
-  const tzColor = TZ_COLORS[state.timezone] ?? 'bg-gray-500 text-white';
   const theme = COUNTRY_THEME[state.country] ?? COUNTRY_THEME.US;
 
   const triviaFact = useMemo(() => {
@@ -43,18 +37,18 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
   }, [state.code, state.trivia]);
 
   return (
-    <div className={`pointer-events-auto relative flex max-h-full min-h-0 w-full max-w-80 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border ${theme.border} bg-white/95 p-5 shadow-2xl backdrop-blur-sm paper-texture`}>
+    <div className={`pointer-events-auto relative flex max-h-full min-h-0 w-full max-w-[340px] flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border ${theme.border} bg-white/95 p-5 shadow-2xl backdrop-blur-sm paper-texture`}>
       {/* Country Watercolor Accent */}
-      <div 
-        className="watercolor-splash right-[-100px] top-[-100px] opacity-10" 
-        style={{ 
+      <div
+        className="watercolor-splash right-[-100px] top-[-100px] opacity-10"
+        style={{
           backgroundImage: `url("${publicAsset(state.country === 'CA' ? '/assets/illustrations/splash-forest.png' : '/assets/illustrations/splash-water.png')}")`,
           width: '200px',
           height: '200px'
-        }} 
+        }}
       />
 
-      <button 
+      <button
         onClick={onClose}
         className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
         aria-label="Close"
@@ -64,29 +58,17 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
         </svg>
       </button>
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 bg-[#232F3E]/5 px-2 py-1 rounded-md border border-[#232F3E]/5">
-            <span className="text-[9px] font-black uppercase tracking-wider text-[#232F3E]/30">Phase 00</span>
-            <div className="w-px h-2.5 bg-[#232F3E]/10" />
-            <span className={`text-[9px] font-black uppercase tracking-wider ${theme.header}`}>{state.code}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-[10px] font-black px-2 py-0.5 rounded-full ${tzColor}`}
-            >
-              {state.timezone}
-            </span>
-            <span className="text-xl">{FLAG[state.country]}</span>
-          </div>
+        <div className="inline-flex items-center gap-2 bg-[#232F3E]/5 px-2 py-1 rounded-md border border-[#232F3E]/5 self-start">
+          <span className={`text-[9px] font-black uppercase tracking-wider ${theme.header}`}>{state.region}</span>
         </div>
-        
+
         <div className="mt-1">
-          <h2 className={`text-3xl sm:text-4xl font-black ${theme.header} leading-[1.1] tracking-tight`}>
-            {state.name}
-          </h2>
-          <p className={`mt-1 text-[11px] font-bold tracking-wider ${theme.label}`}>
-            {state.region.toUpperCase()}
-          </p>
+          <div className="flex items-baseline gap-2">
+            <h2 className={`text-3xl sm:text-4xl font-black ${theme.header} leading-[1.1] tracking-tight`}>
+              {state.name}
+            </h2>
+            <span className={`text-sm font-black ${theme.label}`}>{state.code}</span>
+          </div>
         </div>
       </div>
 
@@ -98,11 +80,15 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
         </div>
         <div className={`${theme.bg} rounded-lg p-3`}>
           <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Timezone</p>
-          <p className={`font-semibold ${theme.header}`}>{state.timezoneLabel}</p>
+          <p className={`font-semibold ${theme.header}`}>{state.timezoneLabel} | {state.timezone}</p>
         </div>
-        <div className={`${theme.bg} rounded-lg p-3 col-span-2`}>
-          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Coast</p>
-          <p className={`font-semibold ${theme.header}`}>{state.coast}</p>
+        <div className={`${theme.bg} rounded-lg p-3`}>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Country</p>
+          <p className={`font-semibold ${theme.header}`}>{state.country === 'CA' ? 'Canada (CA)' : 'United States (US)'}</p>
+        </div>
+        <div className={`${theme.bg} rounded-lg p-3`}>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>State Code</p>
+          <p className={`font-semibold ${theme.header}`}>{state.code}</p>
         </div>
       </div>
 
