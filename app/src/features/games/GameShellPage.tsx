@@ -82,6 +82,11 @@ export default function GameShellPage() {
   const [vaultOpen, setVaultOpen] = useState(false);
   const [streak, setStreak] = useState(0);
 
+  const currentGameIndex =
+    shellState.phase === 'pass' || shellState.phase === 'fail'
+      ? shellState.outcome.gameIndex
+      : shellState.gameIndex;
+
   // Reset streak when game phase changes or game index changes
   useEffect(() => {
     setStreak(0);
@@ -134,11 +139,6 @@ export default function GameShellPage() {
   }
 
   // ── Derive top-bar props ──────────────────────────────────────────────────
-
-  const currentGameIndex =
-    shellState.phase === 'pass' || shellState.phase === 'fail'
-      ? shellState.outcome.gameIndex
-      : shellState.gameIndex;
 
   const currentDef = GAME_DEFINITIONS[currentGameIndex];
   const gameLabel  = currentDef?.label ?? 'Game';
