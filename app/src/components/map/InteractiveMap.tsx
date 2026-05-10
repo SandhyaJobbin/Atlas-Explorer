@@ -27,6 +27,7 @@ interface InteractiveMapProps {
   mode?: 'explore' | 'gameplay';
   timezoneMap?: Record<string, string>;
   hoveredTimezone?: string | null;
+  defaultFill?: string;
 }
 
 type Transform = {
@@ -59,6 +60,7 @@ export default function InteractiveMap({
   mode = 'explore',
   timezoneMap = {},
   hoveredTimezone = null,
+  defaultFill = COLOR_DEFAULT,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -145,7 +147,7 @@ export default function InteractiveMap({
         el.style.fill = tz ? (TZ_FILLS[tz] ?? COLOR_EXPLORED) : COLOR_EXPLORED;
         el.classList.add('is-highlighted');
       } else {
-        el.style.fill = COLOR_DEFAULT;
+        el.style.fill = defaultFill;
         if (mode === 'explore') el.classList.add('is-unvisited');
       }
 
@@ -176,7 +178,7 @@ export default function InteractiveMap({
     });
 
     return () => cleanups.forEach(fn => fn());
-  }, [svgContent, highlightedCodes, activeCode, correctCode, wrongCode, mode, timezoneMap, hoveredTimezone]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [svgContent, highlightedCodes, activeCode, correctCode, wrongCode, mode, timezoneMap, hoveredTimezone, defaultFill]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const container = containerRef.current;

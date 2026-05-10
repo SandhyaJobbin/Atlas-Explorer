@@ -166,7 +166,7 @@ export default function GameShellPage() {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-auto relative">
+        <div className="flex-1 overflow-hidden relative">
           {shellState.phase === 'intro' && session.games[shellState.gameIndex] && (
             <GameIntro
               gameIndex={shellState.gameIndex}

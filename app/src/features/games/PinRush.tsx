@@ -224,7 +224,7 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
 
   if (loading) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center bg-[#080c11] text-white">
+      <main className="h-full flex flex-col items-center justify-center bg-[#080c11] text-white">
         <div className="w-12 h-12 rounded-full border-2 border-[#00A8A2] border-t-transparent animate-spin mb-4" />
         <p className="text-[#00A8A2] text-xs uppercase tracking-[0.2em] font-bold">Initializing Radar</p>
       </main>
@@ -236,7 +236,7 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
   // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
-    <main ref={containerRef} className="flex-1 flex flex-col bg-[#18120e] p-3 gap-2 overflow-hidden relative">
+    <main ref={containerRef} className="h-full flex flex-col bg-[#18120e] p-3 gap-2 overflow-hidden relative">
 
       {/* Thematic Background: Desert Expedition (Performance Optimized) */}
       <div
@@ -351,24 +351,21 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
         )}
 
         {/* Map Rendering */}
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          <div
-            className={[
-              'w-full h-full relative z-0 transition-all duration-300',
-              locked ? 'opacity-40 grayscale-[0.8] scale-95' : 'opacity-100 scale-100',
-              '[&_.atlas-region]:fill-[#5A8B6B] [&_.atlas-region]:stroke-[#2D4A3A]',
-              '[&_.atlas-region:hover]:fill-[#F59E0B]/40 [&_.atlas-region:hover]:stroke-[#F59E0B] [&_.atlas-region:hover]:translate-y-[-2px] transition-all',
-            ].join(' ')}
-          >
-            <InteractiveMap
-              onRegionClick={locked ? () => { } : onRegionClick}
-              highlightedCodes={correctCode ? [correctCode] : []}
-              activeCode={wrongCode}
-              correctCode={correctCode}
-              wrongCode={wrongCode}
-              mode="gameplay"
-            />
-          </div>
+        <div
+          className={[
+            'absolute inset-0 transition-all duration-300',
+            locked ? 'opacity-40 grayscale-[0.8] scale-95' : 'opacity-100 scale-100',
+          ].join(' ')}
+        >
+          <InteractiveMap
+            onRegionClick={locked ? () => { } : onRegionClick}
+            highlightedCodes={correctCode ? [correctCode] : []}
+            activeCode={wrongCode}
+            correctCode={correctCode}
+            wrongCode={wrongCode}
+            mode="gameplay"
+            defaultFill="#5A8B6B"
+          />
         </div>
       </div>
 
