@@ -148,7 +148,7 @@ export default function InteractiveMap({
         el.classList.add('is-highlighted');
       } else {
         el.style.fill = defaultFill;
-        if (mode === 'explore') el.classList.add('is-unvisited');
+        // no heartbeat animation
       }
 
       if (hoveredTimezone) {
@@ -368,17 +368,13 @@ export default function InteractiveMap({
         className={[
           'absolute inset-0 origin-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block',
           '[&_.atlas-region]:transition-all [&_.atlas-region]:duration-300',
-          '[&_.is-unvisited]:animate-map-pulse [&_.is-highlighted]:scale-[1.01]',
+          '[&_.is-highlighted]:scale-[1.01]',
         ].join(' ')}
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: svgContent ?? '' }}
       />
 
       <style>{`
-        @keyframes map-pulse {
-          0%, 100% { opacity: 0.85; filter: saturate(1.2); }
-          50% { opacity: 0.55; filter: saturate(0.8); }
-        }
         .atlas-region {
           cursor: pointer !important;
           paint-order: stroke fill markers;
@@ -406,9 +402,6 @@ export default function InteractiveMap({
           opacity: 0.25;
           filter: grayscale(0.8) contrast(0.8);
         }
-        .is-unvisited {
-          animation: map-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
         .atlas-region:active {
           transform: scale(0.98);
           filter: brightness(0.8);
@@ -421,7 +414,7 @@ export default function InteractiveMap({
           100% { transform: scale(1); filter: brightness(1); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .is-unvisited, .is-highlighted {
+          .is-highlighted {
             animation: none !important;
           }
         }

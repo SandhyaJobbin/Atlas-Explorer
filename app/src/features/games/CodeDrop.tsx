@@ -215,7 +215,7 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
     setCorrectState(questions[qi].state);
 
     if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-    advanceTimerRef.current = setTimeout(advanceQuestion, 4000);
+    advanceTimerRef.current = setTimeout(advanceQuestion, 15000);
   }
 
   function handleCodeSubmit(explicitVal?: string) {

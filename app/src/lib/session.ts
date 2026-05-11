@@ -9,7 +9,7 @@ export const GAME_DEFINITIONS = [
   { key: 'sorter', label: 'Tz Sorter',      maxScore: 312 },
 ] as const;
 
-const TOTAL_REGIONS = 63;
+const TOTAL_REGIONS = 64;
 
 function emptyTraining(): TrainingProgress {
   return { mapExplorerClicked: [], completed: false };

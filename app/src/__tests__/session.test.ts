@@ -175,9 +175,9 @@ describe('session training', () => {
     expect(s.training.mapExplorerClicked).toHaveLength(1);
   });
 
-  it('completes when 63 regions are explored', () => {
+  it('completes when 64 regions are explored', () => {
     const s = makeSession();
-    const codes = Array.from({ length: 63 }, (_, i) => `R${i}`);
+    const codes = Array.from({ length: 64 }, (_, i) => `R${i}`);
     codes.forEach((c) => updateTraining(s, 'map', c));
     expect(isTrainingComplete(s)).toBe(true);
   });

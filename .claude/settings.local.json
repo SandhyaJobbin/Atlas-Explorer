@@ -40,7 +40,8 @@
       "Bash(python3 -c \":*)",
       "mcp__ide__getDiagnostics",
       "Bash(py -3 fix_ak_hi.py)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(ls:*)"
     ]
   }
 }

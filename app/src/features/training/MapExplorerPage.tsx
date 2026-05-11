@@ -9,7 +9,7 @@ import InteractiveMap from '@/components/map/InteractiveMap';
 import StateInfoPanel from '@/components/map/StateInfoPanel';
 import { TZ_COLORS_HEX as TZ_COLORS } from '@/lib/timezones';
 
-const TOTAL = 63;
+const TOTAL = 64;
 
 const OBJECTIVES = [
   { label: 'Capitals', value: 'Identify each seat of government' },
@@ -32,7 +32,7 @@ const MILESTONES = [
   { count: 10, label: 'Scout', icon: '⛺' },
   { count: 25, label: 'Wayfinder', icon: '🧭' },
   { count: 50, label: 'Cartographer', icon: '🗺️' },
-  { count: 63, label: 'Completionist', icon: '🏆' },
+  { count: 64, label: 'Completionist', icon: '🏆' },
 ];
 
 export default function MapExplorerPage() {

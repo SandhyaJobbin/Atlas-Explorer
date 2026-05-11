@@ -75,20 +75,20 @@ export default function StateInfoPanel({ state, onClose }: StateInfoPanelProps) 
       {/* Details grid */}
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className={`${theme.bg} rounded-lg p-3`}>
-          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Capital</p>
-          <p className={`font-semibold ${theme.header}`}>{state.capital}</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>State Code</p>
+          <p className={`font-semibold ${theme.header}`}>{state.code}</p>
         </div>
         <div className={`${theme.bg} rounded-lg p-3`}>
           <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Timezone</p>
           <p className={`font-semibold ${theme.header}`}>{state.timezoneLabel} | {state.timezone}</p>
         </div>
         <div className={`${theme.bg} rounded-lg p-3`}>
-          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Country</p>
-          <p className={`font-semibold ${theme.header}`}>{state.country === 'CA' ? 'Canada (CA)' : 'United States (US)'}</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Capital</p>
+          <p className={`font-semibold ${theme.header}`}>{state.capital}</p>
         </div>
         <div className={`${theme.bg} rounded-lg p-3`}>
-          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>State Code</p>
-          <p className={`font-semibold ${theme.header}`}>{state.code}</p>
+          <p className={`${theme.label} text-[10px] font-bold tracking-wide mb-1`}>Country</p>
+          <p className={`font-semibold ${theme.header}`}>{state.country === 'CA' ? 'Canada (CA)' : 'United States (US)'}</p>
         </div>
       </div>
 

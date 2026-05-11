@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { GameProps, StateEntry } from '@/types';
 import { useAudio } from '@/hooks/useAudio';
-import InfoCard from '@/components/ui/InfoCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { publicAsset } from '@/lib/assets';
@@ -46,10 +45,10 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
   const [placed,       setPlaced]       = useState<Set<string>>(new Set());
   const [cardStatus,   setCardStatus]   = useState<Record<string, CardStatus>>({});
   const [bucketPlaced, setBucketPlaced] = useState<Record<string, StateCard[]>>({});
-  const [correctState, setCorrectState] = useState<StateEntry | null>(null);
+  const [bucketBadge, setBucketBadge] = useState<string | null>(null);
   const [_finished,    setFinished]     = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const [showStamp,    setShowStamp]    = useState<'VERIFIED' | 'FRAUDULENT' | null>(null);
+  const [showStamp,    setShowStamp]    = useState<'CONFIRMED' | 'MISSED' | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const timerRef          = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -81,7 +80,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
     setPlaced(new Set());
     setCardStatus({});
     setBucketPlaced({});
-    setCorrectState(null);
+    setBucketBadge(null);
     setFinished(false);
     setTimeLeft(TIME_PER_ROUND);
 
@@ -115,7 +114,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
 
     if (correctInRound >= BUCKETS_PER_ROUND * STATES_PER_BUCKET) {
       playSound('pass');
-      setShowStamp('VERIFIED');
+      setShowStamp('CONFIRMED');
     }
 
     correctCntRef.current += correctInRound;
@@ -188,13 +187,10 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
       };
       setBucketPlaced(newBucketPlaced);
 
-      // Show state info card when bucket fills up
+      // Show bucket badge when bucket fills up
       if (newBucketPlaced[timezone].length === STATES_PER_BUCKET) {
-        const stateInfo = states.find((s) => s.code === card.code);
-        if (stateInfo) {
-          setCorrectState(stateInfo);
-          setTimeout(() => setCorrectState(null), 2500);
-        }
+        setBucketBadge(`${timezone} Bucket Complete`);
+        setTimeout(() => setBucketBadge(null), 2000);
       }
 
       streakRef.current += 1;
@@ -214,7 +210,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
       setStreak(0);
       onStreakChange?.(0);
       setCardStatus((prev) => ({ ...prev, [cardId]: 'wrong' }));
-      setShowStamp('FRAUDULENT');
+      setShowStamp('MISSED');
       setTimeout(() => {
         setCardStatus((prev) => ({ ...prev, [cardId]: 'idle' }));
         setShowStamp(null);
@@ -402,19 +398,21 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
         ))}
       </div>
 
-      {/* Info Card Overlay (shown when bucket fills up) */}
-      {correctState && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-emerald-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <InfoCard state={correctState} theme="forest" accentColor="#10B981" />
+      {/* Bucket Badge Toast */}
+      {bucketBadge && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in slide-in-from-top duration-300">
+          <div className="bg-[#10B981]/90 text-white text-sm font-black px-6 py-3 rounded-2xl shadow-2xl border border-white/20 backdrop-blur-md uppercase tracking-wider">
+            {bucketBadge}
+          </div>
         </div>
       )}
 
       {/* Stamp Feedback Overlay */}
       {showStamp && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
-          <StampBadge 
-            label={showStamp} 
-            type={showStamp === 'VERIFIED' ? 'success' : 'error'} 
+          <StampBadge
+            label={showStamp}
+            type={showStamp === 'CONFIRMED' ? 'success' : 'error'}
           />
         </div>
       )}

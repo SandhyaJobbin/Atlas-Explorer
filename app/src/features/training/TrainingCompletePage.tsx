@@ -113,7 +113,7 @@ export default function TrainingCompletePage() {
           <div className="text-7xl animate-bounce" aria-hidden="true">🎉</div>
           <h1 className="text-4xl font-black text-[#F59E0B]">Training Complete!</h1>
           <p className="text-white/70 text-lg max-w-sm">
-            You explored all 63 states and provinces across North America.
+            You explored all 64 states and provinces across North America.
           </p>
         </div>
 
@@ -123,7 +123,7 @@ export default function TrainingCompletePage() {
             { count: 10, label: 'Scout', icon: '⛺' },
             { count: 25, label: 'Wayfinder', icon: '🧭' },
             { count: 50, label: 'Cartographer', icon: '🗺️' },
-            { count: 63, label: 'Completionist', icon: '🏆' },
+            { count: 64, label: 'Completionist', icon: '🏆' },
           ].map((m) => (
             <div key={m.count} className="flex flex-col items-center gap-3">
               <div className="w-20 h-20 rounded-full bg-[#2A3441] flex items-center justify-center text-4xl shadow-2xl border-2 border-white/10 relative group transition-all hover:scale-110 hover:border-[#FF9900]/50 hover:shadow-[0_0_30px_rgba(255,153,0,0.2)]">

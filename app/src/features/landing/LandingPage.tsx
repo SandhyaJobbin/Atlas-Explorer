@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
 import { useAudio } from '@/hooks/useAudio';
@@ -110,7 +110,7 @@ function BadgeShelfModal({
 // ─── LandingPage ──────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { createNewSession, createDemoSession, session, clearCurrentSession } = useSession();
+  const { createNewSession, session, clearCurrentSession } = useSession();
   const { playSound } = useAudio();
   const navigate = useNavigate();
 
@@ -118,6 +118,7 @@ export default function LandingPage() {
   const [waveCode,    setWaveCode]    = useState('');
   const [trainerName, setTrainerName] = useState('');
   const [badgeOpen,   setBadgeOpen]   = useState(false);
+  const navigatingRef = useRef(false);
 
   const formValid =
     name.trim().length >= 2 &&
@@ -128,13 +129,8 @@ export default function LandingPage() {
     e.preventDefault();
     if (!formValid) return;
     playSound('click');
+    navigatingRef.current = true;
     createNewSession(name.trim(), waveCode.trim(), trainerName.trim());
-    navigate('/train/map');
-  }
-
-  function handleDemo() {
-    playSound('click');
-    createDemoSession();
     navigate('/train/map');
   }
 
@@ -172,7 +168,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-black text-white leading-tight">Atlas Explorer</h1>
-                <p className="text-[#FF9900] text-[13px] font-bold uppercase tracking-wider opacity-80">Geo Rush · iCube</p>
+                <p className="text-[#FF9900] text-[13px] font-bold uppercase tracking-wider opacity-80">Geo Rush</p>
               </div>
             </div>
 
@@ -185,7 +181,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex-1">
-            {session ? (
+            {session && !navigatingRef.current ? (
               <AnimatedCard className="mb-8 rounded-2xl bg-[#232F3E] text-white p-6 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <LottiePlayer src="assets/lottie/level-up.json" className="w-24 h-24" />
@@ -255,7 +251,7 @@ export default function LandingPage() {
 
                   <div className="flex flex-col gap-4">
                     <label htmlFor="wave-code" className="text-white/40 text-[11px] uppercase tracking-widest font-extrabold flex items-center gap-1">
-                      Wave Code <span className="text-[#EF4444]">*</span>
+                      iCube Wave Code <span className="text-[#EF4444]">*</span>
                     </label>
                     <input
                       id="wave-code"
@@ -286,7 +282,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 pt-4 pb-12">
+                <div className="flex flex-col gap-3 pt-4 pb-6">
                   <button
                     type="submit"
                     disabled={!formValid}
@@ -294,13 +290,6 @@ export default function LandingPage() {
                   >
                     Start Deployment
                   </button>
-                    <button
-                      type="button"
-                      onClick={handleDemo}
-                      className="w-full py-3 rounded-xl border border-white/10 text-white/60 font-black hover:bg-white/5 transition-colors text-xs"
-                    >
-                      Quick Demo
-                    </button>
                 </div>
               </form>
             )}

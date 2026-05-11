@@ -94,7 +94,7 @@ export function buildTzRounds(allStates: RawState[]): TzRound[] {
     });
 
     if (available.length < BUCKETS_PER_ROUND) {
-      // Fallback: reset used codes so we can repeat states (unlikely for 63-state dataset)
+      // Fallback: reset used codes so we can repeat states (unlikely for 64-state dataset)
       usedCodes.clear();
     }
 

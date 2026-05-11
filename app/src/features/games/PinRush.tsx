@@ -18,6 +18,7 @@ import {
 } from '@/lib/pin-it';
 import StampBadge from '@/components/ui/StampBadge';
 import Typewriter from '@/components/ui/Typewriter';
+import StateOutline from '@/components/map/StateOutline';
 
 // ─── Timezone badge colours ───────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
   const [locked, setLocked] = useState(false);
   const [correctCode, setCorrectCode] = useState<string | null>(null);
   const [wrongCode, setWrongCode] = useState<string | null>(null);
-  const [showStamp, setShowStamp] = useState<'VERIFIED' | 'FRAUDULENT' | null>(null);
+  const [showStamp, setShowStamp] = useState<'CONFIRMED' | 'MISSED' | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const startedAtRef = useRef(0);
@@ -148,11 +149,11 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
     if (isCorrect) {
       playSound('correct');
       triggerBurst(null, 'sand-burst');
-      setShowStamp('VERIFIED');
+      setShowStamp('CONFIRMED');
       if (streakRef.current + 1 >= 3) playSound('streak');
     } else {
       playSound('wrong');
-      setShowStamp('FRAUDULENT');
+      setShowStamp('MISSED');
     }
 
     const pts = calculatePoints(isCorrect, elapsed, SPEED_WINDOW);
@@ -329,9 +330,22 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <div className="bg-[#2D3B2F]/95 border border-[#F59E0B]/50 backdrop-blur-xl rounded-2xl px-8 py-4 shadow-[0_15px_40px_rgba(0,0,0,0.6)] animate-in zoom-in duration-300">
             <span className="text-[#F59E0B] text-[10px] uppercase tracking-wider font-black block mb-1 text-center">Satellite Target</span>
-            <span className="text-white text-xl font-black tracking-tight text-center block">
-              <Typewriter key={prompt} text={prompt} delay={0.05} />
-            </span>
+            <div className="flex items-center justify-center gap-3">
+              {currentQ?.type === 'map' && currentQ.state.code && (
+                <div className="w-12 h-12 flex-shrink-0">
+                  <StateOutline
+                    stateCode={currentQ.state.code}
+                    className="w-full h-full"
+                    fill="rgba(245,158,11,0.3)"
+                    stroke="#F59E0B"
+                    strokeWidth={1.5}
+                  />
+                </div>
+              )}
+              <span className="text-white text-xl font-black tracking-tight text-center block">
+                <Typewriter key={prompt} text={prompt} delay={0.05} />
+              </span>
+            </div>
           </div>
         </div>
 
@@ -414,7 +428,7 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
         <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
           <StampBadge
             label={showStamp}
-            type={showStamp === 'VERIFIED' ? 'success' : 'error'}
+            type={showStamp === 'CONFIRMED' ? 'success' : 'error'}
           />
         </div>
       )}
