@@ -1,6 +1,8 @@
 import type { GameState } from '@/types';
 import { publicAsset } from '@/lib/assets';
 import { GAME_DEFINITIONS } from '@/lib/session';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { WifiOff } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ const INTRO_COPY: Record<string, string> = {
 
 const RETRY_MESSAGES: Record<string, string> = {
   crack:  'The signal was unstable. Stabilize the connection and decode with precision.',
-  pin:    'Target lock lost. Recalibrate your scanners and secure the sector.',
+  pin:    'Target lock lost. Recalibrate your map and secure the region.',
   sorter: 'Temporal alignment failed. Re-sort the zones to maintain synchronization.',
 };
 
@@ -51,6 +53,7 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
   const isRetry = game.retryAvailable;
   const label   = DISPLAY_LABELS[definition.key] ?? definition.key;
   const icon    = GAME_ICONS[definition.key]    ?? '??';
+  const { isOffline } = useOnlineStatus();
   const startLabel = isRetry
     ? 'Run it back'
     : (START_COPY[definition.key] ?? 'Play level');
@@ -64,14 +67,14 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
   const retryMessage = RETRY_MESSAGES[definition.key] ?? 'System recalibration required. Run it back.';
 
   return (
-    <main className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#101813]">
+    <main className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-atlas-warm font-display">
       
       {/* ── Map panel ─────────────────────────────────────────────────────── */}
-      <div className="relative flex-1 bg-black/20 flex items-center justify-center overflow-hidden min-h-48 lg:min-h-0 border-r border-white/5">
+      <div className="relative flex-1 bg-atlas-card flex items-center justify-center overflow-hidden min-h-48 lg:min-h-0 border-r border-atlas-border">
         
         {/* Background Journal Texture */}
         <div 
-          className="absolute inset-0 pointer-events-none opacity-[0.08]" 
+          className="absolute inset-0 pointer-events-none opacity-[0.04]" 
           style={{ backgroundImage: `url("${publicAsset('/assets/patterns/paper-grain.png')}")`, backgroundSize: '400px' }} 
         />
         
@@ -87,7 +90,7 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
             <img
               src={publicAsset('/maps/north-america.svg')}
               alt=""
-              className="w-full h-full object-contain opacity-30 drop-shadow-[0_0_40px_rgba(0,168,162,0.15)]"
+              className="w-full h-full object-contain opacity-30 drop-shadow-[0_0_40px_rgba(46,125,50,0.15)]"
             />
             
             {/* Absolute overlay precisely matching the visible map content */}
@@ -103,7 +106,7 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
                   <path
                     d="M20 65 C35 34, 52 28, 74 48"
                     fill="none"
-                    stroke="#10B981"
+                    stroke="var(--atlas-accent)"
                     strokeWidth="0.8"
                     strokeDasharray="4 3"
                     strokeLinecap="round"
@@ -117,10 +120,10 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
                     key={index}
                     className={`absolute w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black border-2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ${
                       index === gameIndex
-                        ? 'bg-[#F59E0B] border-[#F59E0B] text-[#2D3B2F] scale-125 shadow-[0_0_30px_rgba(245,158,11,0.5)] rotate-0'
+                        ? 'bg-atlas-gold border-atlas-gold text-atlas-ink scale-125 shadow-[0_0_30px_rgba(249,168,37,0.5)] rotate-0'
                         : index < gameIndex
-                        ? 'bg-[#10B981] border-[#10B981] text-[#2D3B2F] rotate-12'
-                        : 'bg-white/10 border-white/20 text-white/40'
+                        ? 'bg-atlas-accent border-atlas-accent text-white rotate-12'
+                        : 'bg-atlas-warm border-atlas-border text-atlas-muted'
                     }`}
                     style={{ top: pos.top, left: pos.left }}
                   >
@@ -139,98 +142,98 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
         </div>
 
         {/* Map Legend */}
-        <div className="absolute top-8 left-8 flex flex-col gap-3 z-20">
+        <div className="absolute top-8 left-8 flex flex-col gap-3 z-20 font-display">
           <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
-            <span className="text-white/40 text-[9px] uppercase font-black tracking-widest">Secured Sector</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-atlas-accent shadow-[0_0_10px_rgba(46,125,50,0.3)]" />
+            <span className="text-atlas-muted text-xs uppercase font-black tracking-widest">Completed Region</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shadow-[0_0_10px_rgba(245,158,11,0.3)]" />
-            <span className="text-white/40 text-[9px] uppercase font-black tracking-widest">Active Signal</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-atlas-gold shadow-[0_0_10px_rgba(249,168,37,0.3)]" />
+            <span className="text-atlas-muted text-xs uppercase font-black tracking-widest">Active Signal</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-            <span className="text-white/40 text-[9px] uppercase font-black tracking-widest">Pending Intel</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-atlas-border" />
+            <span className="text-atlas-muted text-xs uppercase font-black tracking-widest">Pending Guide</span>
           </div>
         </div>
 
         {/* Caption */}
-        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 text-center bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border shadow-2xl transition-colors duration-500 ${
-          isRetry ? 'border-red-500/50' : 'border-white/10'
+        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 text-center bg-atlas-card backdrop-blur-md px-6 py-2 rounded-full border shadow-2xl transition-colors duration-500 font-display ${
+          isRetry ? 'border-atlas-error' : 'border-atlas-border'
         }`}>
-          <div className="text-white/40 text-[9px] uppercase tracking-widest font-black mb-1">{isRetry ? 'Recalculating' : 'Next Target'}</div>
-          <div className={`font-black text-sm uppercase tracking-tight ${isRetry ? 'text-red-500' : 'text-[#F59E0B]'}`}>
+          <div className="text-atlas-muted text-xs uppercase tracking-widest font-black mb-1">{isRetry ? 'Recalculating' : 'Next Target'}</div>
+          <div className={`font-black text-sm uppercase tracking-tight ${isRetry ? 'text-atlas-error' : 'text-atlas-gold'}`}>
             {label}
           </div>
         </div>
       </div>
 
-      {/* ── Mission brief panel ───────────────────────────────────────────── */}
-      <div className={`w-full lg:w-[420px] flex flex-col justify-center p-12 gap-8 relative overflow-hidden transition-colors duration-700 ${
-        isRetry ? 'bg-[#1a0c0c]' : 'bg-[#0a0f0d]'
+      {/* ── Expedition brief panel ────────────────────────────────────────── */}
+      <div className={`w-full lg:w-[420px] flex flex-col justify-center p-12 gap-8 relative overflow-hidden transition-colors duration-700 font-display ${
+        isRetry ? 'bg-atlas-error-light/20' : 'bg-atlas-card'
       }`}>
         
         {/* Subtle dot pattern */}
         <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'var(--geo-dot-pattern)', backgroundSize: '24px 24px' }} />
 
         {/* Kicker */}
-        <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-center justify-between relative z-10 font-display">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 text-black flex items-center justify-center rounded-lg shadow-lg font-mono text-xs font-black shrink-0 transition-colors duration-500 ${
-              isRetry ? 'bg-red-600' : 'bg-[#FF9900]'
+            <div className={`w-8 h-8 text-white flex items-center justify-center rounded-lg shadow-lg font-mono text-xs font-black shrink-0 transition-colors duration-500 ${
+              isRetry ? 'bg-atlas-error' : 'bg-atlas-gold'
             }`}>
               {icon}
             </div>
             <div className="flex flex-col">
-              <span className="text-white/40 text-[9px] font-black uppercase tracking-widest">
-                Sector Identification
+              <span className="text-atlas-muted text-xs font-black uppercase tracking-widest">
+                Region Identification
               </span>
-              <span className="text-[#FF9900] text-xs font-black">
+              <span className="text-atlas-gold text-xs font-black">
                 PHASE {gameIndex + 1} // 0{totalGames}
               </span>
             </div>
           </div>
 
           {isRetry && (
-            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-md animate-pulse">
+            <div className="bg-atlas-error text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-md animate-pulse font-display">
               Retry Mode
             </div>
           )}
         </div>
 
         {/* Title + description */}
-        <div className="relative z-10">
-          <h1 className="text-4xl font-black text-white leading-tight tracking-tighter">
+        <div className="relative z-10 font-display">
+          <h1 className="text-4xl font-black text-atlas-ink leading-tight tracking-tighter font-display">
             {label}
-            {isRetry && <span className="text-red-500 ml-2 block text-2xl font-black uppercase tracking-tighter">Remix Protocol</span>}
+            {isRetry && <span className="text-atlas-error ml-2 block text-2xl font-black uppercase tracking-tighter">Remix Protocol</span>}
           </h1>
-          <p className="text-white/60 mt-4 text-base leading-relaxed font-medium">
+          <p className="text-atlas-ink/80 mt-4 text-base leading-relaxed font-medium font-sans">
             {isRetry ? retryMessage : (INTRO_COPY[definition.key] ?? '')}
           </p>
           {isRetry && (
-            <p className="text-red-500/70 mt-2 text-sm font-bold uppercase tracking-wide">
+            <p className="text-atlas-error mt-2 text-sm font-bold uppercase tracking-wide font-sans">
               "Precision matters. Stabilize the signal and run it back."
             </p>
           )}
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-4 relative z-10">
+        <div className="grid grid-cols-2 gap-4 relative z-10 font-display">
           {[
             { 
-              label: isRetry ? 'Current Attempt' : 'Sectors Secured',  
+              label: isRetry ? 'Current Attempt' : 'Regions Completed',  
               value: isRetry ? `Attempt ${attemptNumber}` : `${clearedCount}/${totalGames}`, 
-              accent: isRetry ? '#EF4444' : '#10B981' 
+              accent: isRetry ? 'var(--atlas-error)' : 'var(--atlas-accent)' 
             },
-            { label: 'Best Ratio',  value: bestLabel, accent: '#06B6D4' },
+            { label: 'Best Ratio',  value: bestLabel, accent: 'var(--atlas-gold)' },
           ].map(({ label: l, value, accent }) => (
-            <div key={l} className={`bg-white/5 border border-white/10 rounded-2xl p-5 shadow-md transition-colors duration-500 ${
-              isRetry && l === 'Current Attempt' ? 'border-red-500/30 bg-red-500/5' : 'border-white/5'
+            <div key={l} className={`bg-atlas-warm border border-atlas-border rounded-2xl p-5 shadow-md transition-colors duration-500 ${
+              isRetry && l === 'Current Attempt' ? 'border-atlas-error bg-atlas-error/5' : 'border-atlas-border'
             }`}>
-              <div className="text-white/40 text-[9px] font-black tracking-wider mb-2">{l}</div>
+              <div className="text-atlas-muted text-xs font-black tracking-wider mb-2">{l}</div>
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
-                <strong className="text-white font-mono text-xl leading-none">
+                <strong className="text-atlas-ink font-mono text-xl leading-none">
                   {value}
                 </strong>
               </div>
@@ -239,30 +242,38 @@ export default function GameIntro({ gameIndex, game, clearedCount, totalGames, o
         </div>
 
         {/* Start button */}
-        <div className="mt-4 relative z-10">
+        <div className="mt-4 relative z-10 font-display">
           <button
             onClick={() => onStart(isRetry)}
-            className="w-full btn-chunky btn-chunky-orange py-5 text-xl"
+            className="w-full btn-chunky btn-chunky-orange py-5 text-xl font-display"
           >
             {startLabel}
           </button>
+          {isOffline && (
+            <div className="mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+              <WifiOff className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <p className="text-xs font-medium text-amber-800">
+                Connectivity required for leaderboard — scores will sync later
+              </p>
+            </div>
+          )}
           <div className="mt-6 flex justify-center gap-3">
              {[...Array(totalGames)].map((_, i) => (
                <div 
                  key={i} 
                  className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
                    i === gameIndex 
-                     ? 'bg-[#F59E0B] ring-4 ring-[#F59E0B]/20 scale-125' 
+                     ? 'bg-atlas-gold ring-4 ring-atlas-gold/20 scale-125' 
                      : i < gameIndex 
-                     ? 'bg-[#10B981]' 
-                     : 'bg-[#2D3B2F]/10'
+                     ? 'bg-atlas-accent' 
+                     : 'bg-atlas-border'
                  }`} 
                />
              ))}
           </div>
         </div>
 
-        <p className="text-[#2D3B2F]/30 text-[10px] font-bold text-center tracking-widest relative z-10">
+        <p className="text-atlas-muted text-xs font-bold text-center tracking-widest relative z-10 font-display">
           Unlimited retries · Stars based on precision
         </p>
       </div>

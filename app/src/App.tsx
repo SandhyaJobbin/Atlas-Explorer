@@ -1,8 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { SessionContext, useSessionState } from '@/hooks/useSession';
 import { AudioProvider } from '@/hooks/useAudio';
 import { DataProvider } from '@/hooks/useData';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import { drainQueue } from '@/lib/leaderboard';
 import LandingPage from '@/features/landing/LandingPage';
 import MapExplorerPage from '@/features/training/MapExplorerPage';
 import TrainingCompletePage from '@/features/training/TrainingCompletePage';
@@ -55,6 +58,16 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const { isOnline } = useOnlineStatus();
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (isOnline) drainQueue();
+  }, [isOnline]);
+
   return (
     <HashRouter>
       <OfflineIndicator />

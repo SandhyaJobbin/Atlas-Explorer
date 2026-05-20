@@ -1,5 +1,6 @@
 import type { LeaderboardRow, LeaderboardResponse } from '@/types';
 import { GAME_DEFINITIONS } from './session';
+import { enqueueScore, drainQueue as drainQueueImpl } from './sync-queue';
 
 const APPS_SCRIPT_URL = ''; // Paste your deployed Apps Script /exec URL here
 const LOCAL_LEADERBOARD_KEY = 'atlas-explorer-local-leaderboard';
@@ -27,6 +28,13 @@ export async function submitAttemptScore(payload: AttemptScorePayload): Promise<
 
   if (!isConfigured()) {
     saveLocalScore(body);
+    enqueueScore(body);
+    return;
+  }
+
+  if (!navigator.onLine) {
+    saveLocalScore(body);
+    enqueueScore(body);
     return;
   }
 
@@ -38,6 +46,7 @@ export async function submitAttemptScore(payload: AttemptScorePayload): Promise<
     });
   } catch {
     saveLocalScore(body);
+    enqueueScore(body);
   }
 }
 
@@ -68,9 +77,9 @@ export async function fetchBadges(agent: string): Promise<string[]> {
   }
 }
 
-export async function fetchLeaderboard(agent: string): Promise<LeaderboardResponse> {
+export async function fetchLeaderboard(agent: string, waveCode?: string): Promise<LeaderboardResponse> {
   if (!isConfigured()) {
-    const top10 = getLocalScores();
+    const top10 = getLocalScores(waveCode);
     const currentRow = top10.find((row) => row.agent === agent) || null;
     return { top10, currentRow };
   }
@@ -79,23 +88,29 @@ export async function fetchLeaderboard(agent: string): Promise<LeaderboardRespon
     const url = new URL(APPS_SCRIPT_URL);
     url.searchParams.set('action', 'fetchLeaderboard');
     url.searchParams.set('agent', agent);
+    if (waveCode) url.searchParams.set('waveCode', waveCode);
     const response = await fetch(url);
     return await response.json() as LeaderboardResponse;
   } catch {
-    const top10 = getLocalScores();
+    const top10 = getLocalScores(waveCode);
     const currentRow = top10.find((row) => row.agent === agent) || null;
     return { top10, currentRow };
   }
+}
+
+export async function drainQueue(): Promise<void> {
+  return drainQueueImpl(APPS_SCRIPT_URL);
 }
 
 export function isConfigured(): boolean {
   return APPS_SCRIPT_URL.startsWith('https://');
 }
 
-export function getLocalScores(): LeaderboardRow[] {
+export function getLocalScores(waveCode?: string): LeaderboardRow[] {
   const totals = new Map<string, { agent: string; totalStars: number; badgeCount: number; _gamesPassed: Set<string> }>();
 
   readLocalScores().forEach((row) => {
+    if (waveCode && row.waveCode !== waveCode) return;
     const agent = row.agent as string;
     const stars = row.stars as number;
     const game = row.game as string;
@@ -136,7 +151,7 @@ function saveLocalScore(payload: Record<string, unknown>): void {
   localStorage.setItem(LOCAL_LEADERBOARD_KEY, JSON.stringify(scores));
 }
 
-function readLocalScores(): Record<string, unknown>[] {
+export function readLocalScores(): Record<string, unknown>[] {
   try {
     return JSON.parse(localStorage.getItem(LOCAL_LEADERBOARD_KEY) || '[]') as Record<string, unknown>[];
   } catch {
