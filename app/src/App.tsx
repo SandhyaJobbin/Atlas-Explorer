@@ -1,11 +1,14 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { SessionContext, useSessionState } from '@/hooks/useSession';
 import { AudioProvider } from '@/hooks/useAudio';
+import { DataProvider } from '@/hooks/useData';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import LandingPage from '@/features/landing/LandingPage';
 import MapExplorerPage from '@/features/training/MapExplorerPage';
 import TrainingCompletePage from '@/features/training/TrainingCompletePage';
 import GameShellPage from '@/features/games/GameShellPage';
 import ResultsPage from '@/features/results/ResultsPage';
+import TrainerDashboard from '@/features/trainer/TrainerDashboard';
 
 // ─── Route guards ─────────────────────────────────────────────────────────────
 
@@ -27,14 +30,18 @@ function PlayGuard({ children }: { children: React.ReactElement }) {
     return <Navigate to="/" replace />;
   }
 
+  let shouldTrain = false;
+  let isInvalidSession = false;
   try {
     const session = JSON.parse(raw);
     if (!session?.training?.completed && !hasOverride) {
-      return <Navigate to="/train/map" replace />;
+      shouldTrain = true;
     }
   } catch {
-    if (!hasOverride) return <Navigate to="/" replace />;
+    isInvalidSession = true;
   }
+  if (shouldTrain) return <Navigate to="/train/map" replace />;
+  if (isInvalidSession && !hasOverride) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -50,8 +57,10 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <HashRouter>
+      <OfflineIndicator />
       <AudioProvider>
-        <SessionProvider>
+        <DataProvider>
+          <SessionProvider>
           <Routes>
             <Route path="/" element={<LandingPage />} />
 
@@ -61,11 +70,13 @@ export default function App() {
             <Route path="/play" element={<PlayGuard><GameShellPage /></PlayGuard>} />
             <Route path="/play/results" element={<PlayGuard><ResultsPage /></PlayGuard>} />
 
+            <Route path="/trainer" element={<TrainerDashboard />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </SessionProvider>
+          </SessionProvider>
+        </DataProvider>
       </AudioProvider>
     </HashRouter>
   );
 }
-
