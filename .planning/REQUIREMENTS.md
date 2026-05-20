@@ -78,43 +78,41 @@ None — all requested work is committed to this milestone.
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAND-01 | TBD | Pending |
-| LAND-02 | TBD | Pending |
-| MAP-01 | TBD | Pending |
-| MAP-02 | TBD | Pending |
-| MAP-03 | TBD | Pending |
-| MAP-04 | TBD | Pending |
-| INTERACT-01 | TBD | Pending |
-| INTERACT-02 | TBD | Pending |
-| INTERACT-03 | TBD | Pending |
-| INTERACT-04 | TBD | Pending |
-| INTERACT-05 | TBD | Pending |
-| INTERACT-06 | TBD | Pending |
-| INTERACT-07 | TBD | Pending |
-| INTERACT-08 | TBD | Pending |
-| GAMEPLAY-01 | TBD | Pending |
-| GAMEPLAY-02 | TBD | Pending |
-| GAMEPLAY-03 | TBD | Pending |
-| NAV-01 | TBD | Pending |
-| NAV-02 | TBD | Pending |
-| RESULTS-01 | TBD | Pending |
-| RESULTS-02 | TBD | Pending |
-| LEARN-01 | TBD | Pending |
-| LEARN-02 | TBD | Pending |
-| ARCH-01 | TBD | Pending |
-| ARCH-02 | TBD | Pending |
-| OFFLINE-01 | TBD | Pending |
-| OFFLINE-02 | TBD | Pending |
+| LAND-01 | Phase 8 | Pending |
+| LAND-02 | Phase 8 | Pending |
+| MAP-01 | Phase 1 | Pending |
+| MAP-02 | Phase 1 | Pending |
+| MAP-03 | Phase 1 | Pending |
+| MAP-04 | Phase 1 | Pending |
+| INTERACT-01 | Phase 2 | Pending |
+| INTERACT-02 | Phase 2 | Pending |
+| INTERACT-03 | Phase 2 | Pending |
+| INTERACT-04 | Phase 2 | Pending |
+| INTERACT-05 | Phase 2 | Pending |
+| INTERACT-06 | Phase 2 | Pending |
+| INTERACT-07 | Phase 2 | Pending |
+| INTERACT-08 | Phase 2 | Pending |
+| GAMEPLAY-01 | Phase 1 | Pending |
+| GAMEPLAY-02 | Phase 8 | Pending |
+| GAMEPLAY-03 | Phase 8 | Pending |
+| NAV-01 | Phase 8 | Pending |
+| NAV-02 | Phase 8 | Pending |
+| RESULTS-01 | Phase 8 | Pending |
+| RESULTS-02 | Phase 8 | Pending |
+| LEARN-01 | Phase 5 | Pending |
+| LEARN-02 | Phase 6 | Pending |
+| ARCH-01 | Phase 3 | Pending |
+| ARCH-02 | Phase 4 | Pending |
+| OFFLINE-01 | Phase 7 | Pending |
+| OFFLINE-02 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27 (complete)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-20 after initial definition*
+*Last updated: 2026-05-20 after roadmap creation — all 27 requirements mapped*
