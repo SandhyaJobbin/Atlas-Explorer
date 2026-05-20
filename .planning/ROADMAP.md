@@ -12,7 +12,7 @@ This milestone is a brownfield polish-and-completion pass on an existing geograp
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: SVG and Map Viewport Fixes** - Patch SVG viewBox, reconcile DC mismatch, TOTAL_REGIONS constant, full Canada visibility
+- [x] **Phase 1: SVG and Map Viewport Fixes** - Patch SVG viewBox, reconcile DC mismatch, TOTAL_REGIONS constant, full Canada visibility
 - [ ] **Phase 2: Map Interaction and Z-Index Fixes** - Stable selection, hover debounce, flicker removal, z-index stacking, waypoints
 - [ ] **Phase 3: DataProvider Consolidation (D2)** - Migrate CodeDrop and PinRush off independent fetches to useData()
 - [ ] **Phase 4: GameEvents Emitter and GameState Context (D1)** - Unified live game state via mitt emitter, GameStateProvider
@@ -125,7 +125,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. SVG and Map Viewport Fixes | 0/3 | Planned | - |
+| 1. SVG and Map Viewport Fixes | 3/3 | Complete | 2026-05-21 |
 | 2. Map Interaction and Z-Index Fixes | 0/TBD | Not started | - |
 | 3. DataProvider Consolidation (D2) | 0/TBD | Not started | - |
 | 4. GameEvents Emitter and GameState Context (D1) | 0/TBD | Not started | - |
