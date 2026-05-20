@@ -46,8 +46,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Hovering over small states (RI, DE, DC) shows a popup that appears once and stays — no rapid repeated flicker
   3. The map explorer and Pin It game screens show no per-second visual flicker during gameplay
   4. The Atlas Passport button, zoom in/out controls, and the button obscured by Wave Standings are all visible and clickable without overlap
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+**Plans:**
+- [ ] 02-01-PLAN.md — Selection pop-in + hover flicker fix (Effect B classList diff + Effect A hover simplification)
+- [ ] 02-02-PLAN.md — Per-second flicker fix (Effect B dep audit + split into per-concern effects)
+- [ ] 02-03-PLAN.md — Z-index layout overlap fix (zoom controls, Atlas Passport, Expedition Status z-values)
 
 ### Phase 3: DataProvider Consolidation (D2)
 **Goal**: All game components consume states data from a single shared DataProvider context — no independent per-component fetches of states.json remain
@@ -126,7 +130,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. SVG and Map Viewport Fixes | 3/3 | Complete | 2026-05-21 |
-| 2. Map Interaction and Z-Index Fixes | 0/TBD | Not started | - |
+| 2. Map Interaction and Z-Index Fixes | 0/3 | Planned | - |
 | 3. DataProvider Consolidation (D2) | 0/TBD | Not started | - |
 | 4. GameEvents Emitter and GameState Context (D1) | 0/TBD | Not started | - |
 | 5. Review Round Ordering and Leitner Loop (C2) | 0/TBD | Not started | - |
