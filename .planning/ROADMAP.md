@@ -106,7 +106,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. When the network connection drops, a visible offline indicator appears in the UI within one second
   2. Completing a game while offline stores the score locally — the player is not shown an error, and the score appears on the leaderboard once connectivity is restored
   3. Queued scores are drained automatically when the connection returns — no manual action required from the player
-**Plans**: TBD
+**Plans**: 2 plans
+
+**Plans:**
+- [ ] 07-01-PLAN.md — Offline detection + indicator vertical slice (hook, component, App.tsx wire)
+- [ ] 07-02-PLAN.md — Score queue + drain + game message vertical slice (sync-queue, enqueue, drain, GameIntro)
 
 ### Phase 8: Navigation, Results, and Action Hub (C3)
 **Goal**: Players can navigate the app correctly from every screen, see a unified expedition summary, take action after results, and the landing page renders at 100% zoom
@@ -131,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. SVG and Map Viewport Fixes | 3/3 | Complete | 2026-05-21 |
 | 2. Map Interaction and Z-Index Fixes | 0/3 | Planned | - |
-| 3. DataProvider Consolidation (D2) | 0/TBD | Not started | - |
+| 3. DataProvider Consolidation (D2) | 1/1 | Complete | 2026-05-21 |
 | 4. GameEvents Emitter and GameState Context (D1) | 0/TBD | Not started | - |
 | 5. Review Round Ordering and Leitner Loop (C2) | 0/TBD | Not started | - |
 | 6. Dynamic Difficulty (C5) | 0/TBD | Not started | - |
