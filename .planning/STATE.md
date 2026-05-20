@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: active
+stopped_at: Plan 07-02 complete
+last_updated: "2026-05-21T03:06:00.000Z"
+last_activity: 2026-05-21 — Plan 07-02 executed: score queue + drain + GameIntro offline message
+progress:
+  total_phases: 8
+  completed_phases: 1
+  total_plans: 16
+  completed_plans: 4
+  percent: 14
+---
+
 # Project State
 
 ## Project Reference
@@ -5,32 +21,35 @@
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** The map must render fully and be usable — exploration and every game depend on seeing and interacting with the complete North America map without cropping or obscured controls.
-**Current focus:** Phase 1 — SVG and Map Viewport Fixes
+**Current focus:** Phase 7 — Offline Resilience (C4)
 
 ## Current Position
 
-Phase: 1 of 8 (SVG and Map Viewport Fixes)
-Plan: 3 of 3 in current phase — PHASE COMPLETE
-Status: Phase 1 complete, ready for Phase 2
-Last activity: 2026-05-21 — Phase 1 executed: SVG viewBox fixed (y-start -50→-780), DC excluded from tracking, TOTAL_REGIONS=63, all hardcoded 64s replaced, waypoint verification passed
+Phase: 7 of 8 (Offline Resilience — C4)
+Plan: 2 of 3 in current phase — IN PROGRESS
+Status: Plan 07-02 complete (sync queue + drain + GameIntro offline msg)
+Last activity: 2026-05-21 — Plan 07-02 executed: score queue, drain on reconnect, GameIntro offline banner
 
-Progress: [█░░░░░░░░░] 12.5%
+Progress: [█░░░░░░░░░] 14%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+
+- Total plans completed: 4 (Phase 1: 3 plans, Phase 7: 2 plans)
 - Average duration: —
-- Total execution time: 0 hours
+- Total execution time: ~20 min+ (Phase 7 plans)
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 1 | 3 | 3 | — |
+| 7 | 2 | 3 | 8m |
 
 **Recent Trend:**
-- Last 5 plans: —
+
+- Last 5 plans: 07-02 (8m)
 - Trend: —
 
 *Updated after each plan completion*
@@ -42,24 +61,21 @@ Progress: [█░░░░░░░░░] 12.5%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Roadmap init: Patch existing SVG viewBox (not swap to svg(1)/northAmerica.svg) — lower risk, avoids coordinate-space breakage across all 4 map use sites
-- Roadmap init: Phase 3 (D2) must precede Phase 7 (C4) — hard dependency confirmed in PITFALLS.md
-- Roadmap init: DC reconciliation approach = exclude DC path from SVG listener registration, set TOTAL_REGIONS = 63 (15 min fix, lower risk than adding DC to states.json)
-- Roadmap init: C5 difficulty scoped to session object only — avoids shared-device contamination on classroom Chromebooks
+- Roadmap init: Patch existing SVG viewBox (not swap to svg/northAmerica.svg) — lower risk
+- Roadmap init: Phase 3 (D2) must precede Phase 7 (C4) — hard dependency
+- Roadmap init: DC reconciliation = exclude DC path from SVG, TOTAL_REGIONS = 63
+- 07-01: useOnlineStatus hook + OfflineIndicator — no external deps
+- 07-02: localStorage-based sync queue (not IndexedDB) — simpler, sufficient for scores
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-- Phase 1: Must decide SVG fix strategy (patch viewBox vs. swap asset) before writing code — research recommends patch
-- Phase 3: Verify DataProvider uses sessionStorage (not localStorage) — may need to switch for C4 offline resilience to survive tab close
-- Phase 7: APPS_SCRIPT_URL must be configured before C4 sync queue is meaningful — gate drainQueue() on if (APPS_SCRIPT_URL)
+- Phase 7: APPS_SCRIPT_URL deferred to Plan 3 — drainQueue gated on URL config
 
 ## Deferred Items
-
-Items acknowledged and carried forward:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
@@ -70,6 +86,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-05-20
-Stopped at: Roadmap created and written. REQUIREMENTS.md traceability updated. Ready to begin Phase 1 planning.
+Last session: 2026-05-21T03:06:00.000Z
+Stopped at: Plan 07-02 complete — ready for 07-03 (APPS_SCRIPT_URL config)
 Resume file: None
