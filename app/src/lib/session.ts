@@ -9,10 +9,10 @@ export const GAME_DEFINITIONS = [
   { key: 'sorter', label: 'Tz Sorter',      maxScore: 312 },
 ] as const;
 
-const TOTAL_REGIONS = 64;
+export const TOTAL_REGIONS = 63;
 
 function emptyTraining(): TrainingProgress {
-  return { mapExplorerClicked: [], completed: false };
+  return { mapExplorerClicked: [], mapExplorerOrder: [], journalEntries: [], completed: false };
 }
 
 function makeGameStates(): GameState[] {
@@ -69,6 +69,8 @@ export function recordGameAttempt(
     ratio?: number;
     attemptNumber?: number;
     streakPeak?: number;
+    mistakes?: string[];
+    corrects?: string[];
   },
 ) {
   const index = resolveGameIndex(gameIndexOrKey);
@@ -100,6 +102,8 @@ export function recordGameAttempt(
   game.passed = false;
   game.completed = false;
   game.retryAvailable = true;
+  game.mistakes = attempt.mistakes;
+  game.corrects = attempt.corrects;
   return { status: 'retry' as const, game, attempt, gameIndex: index };
 }
 
@@ -112,8 +116,22 @@ export function updateTraining(
   if (!session.training[field].includes(code)) {
     session.training[field].push(code);
   }
+  if (!session.training.mapExplorerOrder.includes(code)) {
+    session.training.mapExplorerOrder.push(code);
+  }
   session.training.completed =
     session.training.mapExplorerClicked.length >= TOTAL_REGIONS;
+}
+
+export function saveJournalEntry(session: Session, entry: string): void {
+  const cleanEntry = entry.trim();
+  if (!cleanEntry) return;
+  session.training.journalEntries = Array.isArray(session.training.journalEntries)
+    ? session.training.journalEntries
+    : [];
+  if (!session.training.journalEntries.includes(cleanEntry)) {
+    session.training.journalEntries.push(cleanEntry);
+  }
 }
 
 export function isTrainingComplete(session: Session): boolean {
@@ -137,7 +155,7 @@ export function isAllPassed(session: Session): boolean {
 }
 
 // isFlagged: kept for backward compatibility; unlimited retries means always false
-export function isFlagged(_session: Session): boolean {
+export function isFlagged(): boolean {
   return false;
 }
 
@@ -161,7 +179,7 @@ export function getSubmissionPayload(session: Session) {
     total: getTotalScore(session),
     stars: getTotalStars(session),
     passFail: isAllPassed(session) ? 'Pass' : 'Fail',
-    flagged: isFlagged(session) ? 'Yes' : 'No',
+    flagged: isFlagged() ? 'Yes' : 'No',
   };
 }
 
@@ -192,8 +210,11 @@ export function loadSession(storage: Storage = globalThis.localStorage): Session
     session.training = emptyTraining();
   } else {
     const t = session.training as Partial<TrainingProgress> & { geoTilesClicked?: string[] };
+    const clicked = Array.isArray(t.mapExplorerClicked) ? t.mapExplorerClicked : [];
     session.training = {
-      mapExplorerClicked: Array.isArray(t.mapExplorerClicked) ? t.mapExplorerClicked : [],
+      mapExplorerClicked: clicked,
+      mapExplorerOrder: Array.isArray(t.mapExplorerOrder) ? t.mapExplorerOrder : [...clicked],
+      journalEntries: Array.isArray(t.journalEntries) ? t.journalEntries : [],
       completed: Boolean(t.completed),
     };
   }
@@ -213,6 +234,8 @@ export function loadSession(storage: Storage = globalThis.localStorage): Session
       label: definition.label,
       attempts,
       attemptNumber: attempts.length,
+      mistakes: Array.isArray(legacyGame.mistakes) ? legacyGame.mistakes : [],
+      corrects: Array.isArray(legacyGame.corrects) ? legacyGame.corrects : [],
     } as GameState;
   });
   session.currentGameIndex = Math.min(
@@ -242,24 +265,26 @@ function applyFinalAttempt(game: GameState, attempt: ReturnType<typeof normalize
   game.passed = Boolean(attempt.passed);
   game.attemptNumber = attempt.attemptNumber;
   game.completed = true;
+  game.mistakes = attempt.mistakes;
+  game.corrects = attempt.corrects;
 }
 
 // ─── Rank Logic ───────────────────────────────────────────────────────────────
 
-export type Rank = 'Trainee' | 'Specialist' | 'Lead Analyst' | 'Master Screener';
+export type Rank = 'Explorer' | 'Pathfinder' | 'Navigator' | 'Trailblazer';
 
 export const RANK_THRESHOLDS = [
-  { rank: 'Master Screener' as Rank, min: 600, icon: '🛡️' },
-  { rank: 'Lead Analyst' as Rank,    min: 400, icon: '⚖️' },
-  { rank: 'Specialist' as Rank,      min: 200, icon: '🔍' },
-  { rank: 'Trainee' as Rank,         min: 0,   icon: '📁' },
+  { rank: 'Trailblazer' as Rank, min: 600, icon: '🌎' },
+  { rank: 'Navigator' as Rank,    min: 400, icon: '⛰️' },
+  { rank: 'Pathfinder' as Rank,      min: 200, icon: '🗺️' },
+  { rank: 'Explorer' as Rank,         min: 0,   icon: '🧭' },
 ];
 
 export function getRank(score: number): Rank {
   for (const t of RANK_THRESHOLDS) {
     if (score >= t.min) return t.rank;
   }
-  return 'Trainee';
+  return 'Explorer';
 }
 
 export function getRankInfo(score: number) {

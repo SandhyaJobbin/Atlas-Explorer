@@ -14,6 +14,7 @@ import {
   saveSession,
   loadSession,
   clearSession,
+  TOTAL_REGIONS,
 } from '@/lib/session';
 import type { Session } from '@/types';
 
@@ -175,9 +176,9 @@ describe('session training', () => {
     expect(s.training.mapExplorerClicked).toHaveLength(1);
   });
 
-  it('completes when 64 regions are explored', () => {
+  it('completes when TOTAL_REGIONS regions are explored', () => {
     const s = makeSession();
-    const codes = Array.from({ length: 64 }, (_, i) => `R${i}`);
+    const codes = Array.from({ length: TOTAL_REGIONS }, (_, i) => `R${i}`);
     codes.forEach((c) => updateTraining(s, 'map', c));
     expect(isTrainingComplete(s)).toBe(true);
   });

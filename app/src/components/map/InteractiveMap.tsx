@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Plus, Minus } from 'lucide-react';
 
 let svgCache: string | null = null;
 
-const COLOR_DEFAULT = '#37475A';
-const COLOR_EXPLORED = '#00A8A2';
-const COLOR_ACTIVE = '#FF9900';
-const COLOR_CORRECT = '#35D07F';
-const COLOR_WRONG = '#FF6577';
+const COLOR_DEFAULT = 'var(--atlas-border)';
+const COLOR_EXPLORED = 'var(--atlas-gold)';
+const COLOR_ACTIVE = 'var(--atlas-accent)';
+const COLOR_CORRECT = 'var(--atlas-accent)';
+const COLOR_WRONG = 'var(--atlas-error)';
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 5;
@@ -17,9 +18,11 @@ function publicAsset(path: string) {
 }
 
 import { TZ_FILLS } from '@/lib/timezones';
+import { updateExplorationTrail } from '@/lib/exploration-trail';
 
 interface InteractiveMapProps {
-  onRegionClick: (code: string) => void;
+  onRegionClick: (code: string, flightSource?: RegionFlightSource) => void;
+  onRegionHover?: (code: string | null, pos?: { x: number; y: number }) => void;
   highlightedCodes?: string[];
   activeCode?: string | null;
   correctCode?: string | null;
@@ -28,7 +31,20 @@ interface InteractiveMapProps {
   timezoneMap?: Record<string, string>;
   hoveredTimezone?: string | null;
   defaultFill?: string;
+  heatmapMap?: Record<string, string>;
+  miniMap?: boolean;
+  explorationOrder?: string[];
+  masteredCodes?: string[];
+  pulsingClusterCodes?: string[];
 }
+
+export type RegionFlightSource = {
+  pathD: string;
+  bbox: { x: number; y: number; width: number; height: number };
+  rect: { left: number; top: number; width: number; height: number };
+  fill: string;
+  stroke: string;
+};
 
 type Transform = {
   zoom: number;
@@ -49,10 +65,39 @@ type DragState = {
   startPanY: number;
   moved: boolean;
   regionCode?: string;
+  regionElement?: SVGPathElement;
 };
+
+function getRegionFlightSource(el: SVGPathElement): RegionFlightSource | undefined {
+  const pathD = el.getAttribute('d');
+  if (!pathD) return undefined;
+
+  const bbox = el.getBBox();
+  const rect = el.getBoundingClientRect();
+  const styles = window.getComputedStyle(el);
+
+  return {
+    pathD,
+    bbox: {
+      x: bbox.x,
+      y: bbox.y,
+      width: Math.max(1, bbox.width),
+      height: Math.max(1, bbox.height),
+    },
+    rect: {
+      left: rect.left,
+      top: rect.top,
+      width: Math.max(1, rect.width),
+      height: Math.max(1, rect.height),
+    },
+    fill: styles.fill || 'var(--atlas-accent)',
+    stroke: styles.stroke || 'var(--atlas-ink)',
+  };
+}
 
 export default function InteractiveMap({
   onRegionClick,
+  onRegionHover,
   highlightedCodes = [],
   activeCode = null,
   correctCode = null,
@@ -61,10 +106,16 @@ export default function InteractiveMap({
   timezoneMap = {},
   hoveredTimezone = null,
   defaultFill = COLOR_DEFAULT,
+  heatmapMap,
+  miniMap = false,
+  explorationOrder = [],
+  masteredCodes = [],
+  pulsingClusterCodes = [],
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<Transform>({ zoom: 1, panX: 0, panY: 0 });
+  const [transform, setTransformState] = useState<Transform>({ zoom: 1, panX: 0, panY: 0 });
   const dragStateRef = useRef<DragState | null>(null);
   const pointersRef = useRef<Map<number, PointerPoint>>(new Map());
   const pinchRef = useRef<{
@@ -74,10 +125,19 @@ export default function InteractiveMap({
   } | null>(null);
 
   const onRegionClickRef = useRef(onRegionClick);
-  onRegionClickRef.current = onRegionClick;
+
+  const onRegionHoverRef = useRef(onRegionHover);
 
   const [svgContent, setSvgContent] = useState<string | null>(svgCache);
   const [loading, setLoading] = useState(!svgCache);
+
+  useEffect(() => {
+    onRegionClickRef.current = onRegionClick;
+  }, [onRegionClick]);
+
+  useEffect(() => {
+    onRegionHoverRef.current = onRegionHover;
+  }, [onRegionHover]);
 
   const clampTransform = useCallback((next: Transform): Transform => {
     const container = containerRef.current;
@@ -102,6 +162,7 @@ export default function InteractiveMap({
     const raw = typeof next === 'function' ? next(transformRef.current) : next;
     const clamped = clampTransform(raw);
     transformRef.current = clamped;
+    setTransformState(clamped);
     
     if (contentRef.current) {
       requestAnimationFrame(() => {
@@ -124,43 +185,23 @@ export default function InteractiveMap({
       .catch(console.error);
   }, []);
 
+  // Effect A — Listener registration & Country Classification (runs once when svgContent loads)
   useEffect(() => {
     if (!svgContent || !contentRef.current) return;
     const cleanups: (() => void)[] = [];
     contentRef.current.querySelectorAll('.atlas-region').forEach((el) => {
       if (!(el instanceof SVGPathElement)) return;
-      const code = el.getAttribute('data-code') || '';
-      const tz = timezoneMap[code];
-      
-      el.classList.remove('is-active', 'is-highlighted', 'is-correct', 'is-wrong', 'is-unvisited', 'is-tz-hover', 'is-dimmed');
+      const code = el.getAttribute('data-code') || el.getAttribute('id') || '';
 
-      if (code === correctCode) {
-        el.style.fill = COLOR_CORRECT;
-        el.classList.add('is-correct');
-      } else if (code === wrongCode) {
-        el.style.fill = COLOR_WRONG;
-        el.classList.add('is-wrong');
-      } else if (code === activeCode) {
-        el.style.fill = COLOR_ACTIVE;
-        el.classList.add('is-active');
-      } else if (highlightedCodes.includes(code)) {
-        el.style.fill = tz ? (TZ_FILLS[tz] ?? COLOR_EXPLORED) : COLOR_EXPLORED;
-        el.classList.add('is-highlighted');
-      } else {
-        el.style.fill = defaultFill;
-        // no heartbeat animation
+      // Exclude DC from interaction tracking — DC is in SVG (64 paths) but not in states.json (63 entries)
+      if (code === 'DC') return;
+
+      if (code.startsWith('US-')) {
+        el.classList.add('atlas-region-us');
+      } else if (code.startsWith('CA-')) {
+        el.classList.add('atlas-region-ca');
       }
 
-      if (hoveredTimezone) {
-        if (tz === hoveredTimezone) {
-          el.classList.add('is-tz-hover');
-        } else {
-          el.classList.add('is-dimmed');
-        }
-      }
-
-      el.style.cursor = mode === 'gameplay' && !correctCode && !wrongCode ? 'crosshair' : 'pointer';
-      
       // Accessibility: Keyboard navigation
       el.setAttribute('tabindex', '0');
       el.setAttribute('role', 'button');
@@ -169,16 +210,100 @@ export default function InteractiveMap({
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onRegionClickRef.current(code);
+          onRegionClickRef.current(code, getRegionFlightSource(el));
         }
       };
 
-      el.addEventListener('keydown', handleKeyDown as any);
-      cleanups.push(() => el.removeEventListener('keydown', handleKeyDown as any));
+      el.addEventListener('keydown', handleKeyDown);
+      cleanups.push(() => el.removeEventListener('keydown', handleKeyDown));
+
+      const handlePointerEnter = (e: PointerEvent) => {
+        if (onRegionHoverRef.current) {
+          onRegionHoverRef.current(code, { x: e.clientX, y: e.clientY });
+        }
+      };
+
+      const handlePointerMove = (e: PointerEvent) => {
+        if (onRegionHoverRef.current) {
+          onRegionHoverRef.current(code, { x: e.clientX, y: e.clientY });
+        }
+      };
+
+      const handlePointerLeave = () => {
+        if (onRegionHoverRef.current) {
+          onRegionHoverRef.current(null);
+        }
+      };
+
+      el.addEventListener('pointerenter', handlePointerEnter);
+      el.addEventListener('pointermove', handlePointerMove);
+      el.addEventListener('pointerleave', handlePointerLeave);
+      cleanups.push(() => {
+        el.removeEventListener('pointerenter', handlePointerEnter);
+        el.removeEventListener('pointermove', handlePointerMove);
+        el.removeEventListener('pointerleave', handlePointerLeave);
+      });
     });
 
     return () => cleanups.forEach(fn => fn());
-  }, [svgContent, highlightedCodes, activeCode, correctCode, wrongCode, mode, timezoneMap, hoveredTimezone, defaultFill]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [svgContent]);
+
+  // Effect B — Visual state update (batched via requestAnimationFrame)
+  useEffect(() => {
+    if (!svgContent || !contentRef.current) return;
+    const frameId = requestAnimationFrame(() => {
+      if (!contentRef.current) return;
+      contentRef.current.querySelectorAll('.atlas-region').forEach((el) => {
+        if (!(el instanceof SVGPathElement)) return;
+        const code = el.getAttribute('data-code') || el.getAttribute('id') || '';
+        const tz = timezoneMap[code];
+        
+        el.classList.remove('is-active', 'is-highlighted', 'is-correct', 'is-wrong', 'is-unvisited', 'is-tz-hover', 'is-dimmed', 'is-heatmap', 'is-mastered', 'is-cluster-pulse');
+
+        if (heatmapMap && heatmapMap[code]) {
+          el.style.fill = heatmapMap[code];
+          el.classList.add('is-heatmap');
+        } else if (code === correctCode) {
+          el.style.fill = COLOR_CORRECT;
+          el.classList.add('is-correct');
+        } else if (code === wrongCode) {
+          el.style.fill = COLOR_WRONG;
+          el.classList.add('is-wrong');
+        } else if (code === activeCode) {
+          el.style.fill = COLOR_ACTIVE;
+          el.classList.add('is-active');
+        } else if (pulsingClusterCodes.includes(code)) {
+          el.style.fill = COLOR_ACTIVE;
+          el.classList.add('is-cluster-pulse');
+        } else if (masteredCodes.includes(code)) {
+          el.style.fill = tz ? (TZ_FILLS[tz] ?? COLOR_EXPLORED) : COLOR_EXPLORED;
+          el.classList.add('is-mastered');
+        } else if (highlightedCodes.includes(code)) {
+          el.style.fill = tz ? (TZ_FILLS[tz] ?? COLOR_EXPLORED) : COLOR_EXPLORED;
+          el.classList.add('is-highlighted');
+        } else {
+          el.style.fill = defaultFill;
+        }
+
+        if (hoveredTimezone) {
+          if (tz === hoveredTimezone) {
+            el.classList.add('is-tz-hover');
+          } else {
+            el.classList.add('is-dimmed');
+          }
+        }
+
+        el.style.cursor = mode === 'gameplay' && !correctCode && !wrongCode ? 'crosshair' : 'pointer';
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [svgContent, highlightedCodes, masteredCodes, pulsingClusterCodes, activeCode, correctCode, wrongCode, mode, timezoneMap, hoveredTimezone, defaultFill, heatmapMap]);
+
+  useEffect(() => {
+    if (!svgContent || !contentRef.current || mode !== 'explore') return;
+    updateExplorationTrail(contentRef.current, explorationOrder);
+  }, [svgContent, explorationOrder, mode]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -233,6 +358,9 @@ export default function InteractiveMap({
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (onRegionHoverRef.current) {
+      onRegionHoverRef.current(null);
+    }
     const point = getPointerPoint(e);
     pointersRef.current.set(e.pointerId, point);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -247,7 +375,7 @@ export default function InteractiveMap({
       return;
     }
 
-    const region = (e.target as Element).closest('.atlas-region') as HTMLElement | null;
+    const region = (e.target as Element).closest('.atlas-region') as SVGPathElement | null;
     dragStateRef.current = {
       active: true,
       startX: point.x,
@@ -256,6 +384,7 @@ export default function InteractiveMap({
       startPanY: transformRef.current.panY,
       moved: false,
       regionCode: region?.dataset.code,
+      regionElement: region ?? undefined,
     };
   }
 
@@ -326,7 +455,7 @@ export default function InteractiveMap({
     }
 
     if (drag?.active && !drag.moved && drag.regionCode) {
-      onRegionClick(drag.regionCode);
+      onRegionClick(drag.regionCode, drag.regionElement ? getRegionFlightSource(drag.regionElement) : undefined);
     }
 
     dragStateRef.current = null;
@@ -345,7 +474,7 @@ export default function InteractiveMap({
 
   if (loading) {
     return (
-      <div className="w-full h-full bg-[#1a2a1a] rounded-xl flex items-center justify-center text-[#00A8A2]">
+      <div className="w-full h-full bg-atlas-card rounded-xl flex items-center justify-center text-atlas-muted font-display">
         Loading map...
       </div>
     );
@@ -354,23 +483,22 @@ export default function InteractiveMap({
   return (
     <div
       ref={containerRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
-      className="relative w-full h-full rounded-xl overflow-hidden select-none touch-none bg-[#1F2937]"
+      onPointerDown={miniMap ? undefined : handlePointerDown}
+      onPointerMove={miniMap ? undefined : handlePointerMove}
+      onPointerUp={miniMap ? undefined : handlePointerEnd}
+      onPointerCancel={miniMap ? undefined : handlePointerEnd}
+      className={['relative w-full h-full rounded-xl select-none bg-atlas-card overflow-hidden', miniMap ? 'pointer-events-none' : 'touch-pan-x touch-pan-y'].join(' ')}
     >
       <div
         ref={contentRef}
         style={{
-          transform: `translate(${transformRef.current.panX}px, ${transformRef.current.panY}px) scale(${transformRef.current.zoom})`,
+          transform: `translate(${transform.panX}px, ${transform.panY}px) scale(${transform.zoom})`,
         }}
         className={[
           'absolute inset-0 origin-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block',
           '[&_.atlas-region]:transition-all [&_.atlas-region]:duration-300',
           '[&_.is-highlighted]:scale-[1.01]',
         ].join(' ')}
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: svgContent ?? '' }}
       />
 
@@ -380,8 +508,22 @@ export default function InteractiveMap({
           paint-order: stroke fill markers;
           outline: none;
         }
+        .atlas-region-us {
+          stroke: var(--atlas-us-stroke, #1E3A5F);
+          stroke-width: 0.8px;
+        }
+        .atlas-region-ca {
+          stroke: var(--atlas-ca-stroke, #6B2121);
+          stroke-width: 0.8px;
+        }
+        [id^="US-"], [data-code^="US-"] {
+          filter: drop-shadow(0 0 2px rgba(30, 58, 95, 0.3));
+        }
+        [id^="CA-"], [data-code^="CA-"] {
+          filter: drop-shadow(0 0 2px rgba(107, 33, 33, 0.3));
+        }
         .atlas-region:focus-visible {
-          stroke: #FF9900 !important;
+          stroke: var(--atlas-accent) !important;
           stroke-width: 4px !important;
           filter: brightness(1.2);
           z-index: 50;
@@ -407,48 +549,64 @@ export default function InteractiveMap({
           filter: brightness(0.8);
         }
         .is-highlighted {
-          animation: region-stamp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          opacity: 0.85;
+          filter: saturate(0.85);
         }
-        @keyframes region-stamp {
-          0% { transform: scale(1.1); filter: brightness(1.5); }
-          100% { transform: scale(1); filter: brightness(1); }
+        .is-mastered {
+          opacity: 1;
+          filter: saturate(1) brightness(0.98);
+          stroke-width: 1px !important;
+        }
+        .is-cluster-pulse {
+          animation: cluster-pulse-glow 1.5s ease-in-out !important;
+          stroke: var(--atlas-accent) !important;
+          stroke-width: 3px !important;
+          z-index: 40;
+          position: relative;
+        }
+        @keyframes cluster-pulse-glow {
+          0% { filter: brightness(1); fill: var(--atlas-accent); stroke-width: 3px; transform: scale(1.01); }
+          50% { filter: brightness(1.3) drop-shadow(0 0 12px var(--atlas-accent)); fill: var(--atlas-accent); stroke-width: 4px; transform: scale(1.03); }
+          100% { filter: brightness(1); fill: var(--atlas-accent); stroke-width: 3px; transform: scale(1); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .is-highlighted {
+          .is-cluster-pulse {
             animation: none !important;
           }
         }
       `}</style>
 
-      <div className="absolute bottom-3 right-3 z-20 flex overflow-hidden rounded-xl border border-white/10 bg-[#0d1a0d]/80 shadow-xl backdrop-blur-md">
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => zoomBy(0.25)}
-          className="flex h-10 w-10 items-center justify-center border-r border-white/10 text-lg font-black text-white transition-colors hover:bg-white/10"
-          aria-label="Zoom in"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => zoomBy(-0.25)}
-          className="flex h-10 w-10 items-center justify-center border-r border-white/10 text-lg font-black text-white transition-colors hover:bg-white/10"
-          aria-label="Zoom out"
-        >
-          -
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={resetView}
-          className="flex h-10 w-14 items-center justify-center text-[10px] font-black uppercase tracking-widest text-[#00A8A2] transition-colors hover:bg-white/10"
-          aria-label="Reset map view"
-        >
-          Reset
-        </button>
-      </div>
+      {!miniMap && (
+        <div className="absolute bottom-3 right-3 z-20 flex overflow-hidden rounded-xl border border-atlas-border bg-atlas-card/80 shadow-xl backdrop-blur-md font-display">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => zoomBy(0.25)}
+            className="flex h-10 w-10 items-center justify-center border-r border-atlas-border text-lg font-black text-atlas-ink transition-colors hover:bg-atlas-warm"
+            aria-label="Zoom in"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => zoomBy(-0.25)}
+            className="flex h-10 w-10 items-center justify-center border-r border-atlas-border text-lg font-black text-atlas-ink transition-colors hover:bg-atlas-warm"
+            aria-label="Zoom out"
+          >
+            <Minus className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={resetView}
+            className="flex h-10 w-14 items-center justify-center text-xs font-black uppercase tracking-widest text-atlas-accent transition-colors hover:bg-atlas-warm"
+            aria-label="Reset map view"
+          >
+            Reset
+          </button>
+        </div>
+      )}
     </div>
   );
 }

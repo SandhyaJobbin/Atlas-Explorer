@@ -1,46 +1,69 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Compass, Map, MapPin, Trophy, X } from 'lucide-react';
 import { useSession } from '@/hooks/useSession';
 import { useAudio } from '@/hooks/useAudio';
-import type { StateEntry } from '@/types';
+import { useData } from '@/hooks/useData';
+import { publicAsset } from '@/lib/assets';
 import AppLayout from '@/components/layout/AppLayout';
-import TrainingTopBar from '@/components/layout/TrainingTopBar';
-import InteractiveMap from '@/components/map/InteractiveMap';
+import InteractiveMap, { type RegionFlightSource } from '@/components/map/InteractiveMap';
 import StateInfoPanel from '@/components/map/StateInfoPanel';
-import { TZ_COLORS_HEX as TZ_COLORS } from '@/lib/timezones';
-
-const TOTAL = 64;
-
-const OBJECTIVES = [
-  { label: 'Capitals', value: 'Identify each seat of government' },
-  { label: 'Timezones', value: 'Track regional operating windows' },
-  { label: 'Coasts', value: 'Spot Atlantic, Pacific, and inland routes' },
-  { label: 'Specialties', value: 'Collect local notes and landmarks' },
-];
+import TrainingTopBar from '@/components/layout/TrainingTopBar';
+import { triggerClusterComplete, triggerMilestoneCeremony } from '@/lib/celebrations';
+import { TOTAL_REGIONS } from '@/lib/session';
 
 const PIN_POSITIONS = [
-  { top: '35%', left: '46%' },
-  { top: '50%', left: '52%' },
+  { top: '25%', left: '30%' },
+  { top: '45%', left: '60%' },
   { top: '70%', left: '42%' },
 ];
 
-function publicAsset(path: string) {
-  return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
-}
-
 const MILESTONES = [
-  { count: 10, label: 'Scout', icon: '⛺' },
-  { count: 25, label: 'Wayfinder', icon: '🧭' },
+  { count: 10, label: 'Scout', icon: '🧭' },
+  { count: 25, label: 'Wayfinder', icon: '📍' },
   { count: 50, label: 'Cartographer', icon: '🗺️' },
-  { count: 64, label: 'Completionist', icon: '🏆' },
+  { count: TOTAL_REGIONS, label: 'Completionist', icon: '🏆' },
 ];
 
-export default function MapExplorerPage() {
-  const { session, updateTraining } = useSession();
-  const { playSound } = useAudio();
-  const navigate = useNavigate();
+const MILESTONE_ICON_COMPONENTS: Record<number, typeof Compass> = {
+  10: Compass,
+  25: MapPin,
+  50: Map,
+  [TOTAL_REGIONS]: Trophy,
+};
 
-  const [states, setStates] = useState<StateEntry[]>([]);
+const CLUSTER_CHECKPOINTS: Record<string, string[]> = {
+  'Pacific Coast': ['WA', 'OR', 'CA', 'AK', 'HI'],
+  'Mountain West': ['MT', 'ID', 'WY', 'NV', 'UT', 'CO', 'AZ', 'NM'],
+  'Midwest Heartland': ['ND', 'SD', 'NE', 'KS', 'MN', 'IA', 'MO', 'WI', 'IL', 'MI', 'IN', 'OH'],
+  'Southern Belt': ['TX', 'OK', 'AR', 'LA', 'MS', 'AL', 'TN', 'KY', 'GA', 'FL', 'SC', 'NC', 'VA', 'WV'],
+  'Northeast Corridor': ['MD', 'DE', 'PA', 'NJ', 'NY', 'CT', 'RI', 'MA', 'VT', 'NH', 'ME']
+};
+
+type RegionFlight = RegionFlightSource & {
+  id: number;
+  dx: number;
+  dy: number;
+  sx: number;
+  sy: number;
+};
+
+const PANEL_WIDTH = 340;
+const FLIGHT_DURATION_MS = 300;
+
+function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+export default function MapExplorerPage() {
+  const { session, updateTraining, saveJournalEntry } = useSession();
+  const { playSound } = useAudio();
+  const { states } = useData();
+  const navigate = useNavigate();
   const [activeCode, setActiveCode] = useState<string | null>(null);
   const [phase, setPhase] = useState<'intro' | 'exploring'>('intro');
   const [passportOpen, setPassportOpen] = useState(() => {
@@ -49,40 +72,101 @@ export default function MapExplorerPage() {
   const [showLegend, setShowLegend] = useState(() => {
     return localStorage.getItem('atlas_showLegend') === 'true';
   });
-  const [hoveredTimezone, setHoveredTimezone] = useState<string | null>(null);
-  const [milestonePopup, setMilestonePopup] = useState<{ label: string, icon: string } | null>(null);
+  const [milestonePopup, setMilestonePopup] = useState<{ count: number; label: string; icon: string } | null>(null);
+  const [completedCluster, setCompletedCluster] = useState<string | null>(null);
+  const [hoveredRegion, setHoveredRegion] = useState<{ code: string; pos: { x: number; y: number } } | null>(null);
+  const [panelCode, setPanelCode] = useState<string | null>(null);
+  const [regionFlight, setRegionFlight] = useState<RegionFlight | null>(null);
+  const [tourStep, setTourStep] = useState(() => {
+    if (localStorage.getItem('atlas_tour_seen')) return -1;
+    return 0;
+  });
+  const panelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clicked = session?.training.mapExplorerClicked ?? [];
-  const activeState = states.find((s) => s.code === activeCode) ?? null;
-  const allDone = clicked.length >= TOTAL;
+  // Time budget tracking (B4)
+  const [elapsedBudget, setElapsedBudget] = useState(() => {
+    const stored = localStorage.getItem('atlas_training_budget');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+
+  useEffect(() => {
+    if (phase !== 'exploring' || milestonePopup) return;
+    const interval = setInterval(() => {
+      setElapsedBudget(prev => {
+        const next = Math.min(900, prev + 1); // 15 min budget
+        localStorage.setItem('atlas_training_budget', next.toString());
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [milestonePopup, phase]);
+
+  // Tour auto-dismiss timer (C1)
+  useEffect(() => {
+    if (tourStep < 0 || tourStep > 2) return;
+    const timer = setTimeout(() => {
+      setTourStep(-1);
+      localStorage.setItem('atlas_tour_seen', 'true');
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [tourStep]);
+
+  function dismissTour() {
+    setTourStep(-1);
+    localStorage.setItem('atlas_seen', 'true');
+  }
+
+  const clicked = useMemo(() => session?.training?.mapExplorerClicked || [], [session]);
+  const explorationOrder = useMemo(() => session?.training?.mapExplorerOrder || [], [session]);
+  const allDone = useMemo(() => clicked.length >= states.length && states.length > 0, [clicked.length, states.length]);
 
   const timezoneMap = useMemo(() => {
-    return states.reduce((acc, s) => {
-      acc[s.code] = s.timezone;
-      return acc;
-    }, {} as Record<string, string>);
+    const map: Record<string, string> = {};
+    states.forEach(s => { map[s.code] = s.timezone; });
+    return map;
   }, [states]);
 
-  const stats = useMemo(() => {
-    const clickedStates = states.filter((s) => clicked.includes(s.code));
-    
-    const byCountry = {
-      US: { current: clickedStates.filter(s => s.country === 'US').length, total: states.filter(s => s.country === 'US').length },
-      CA: { current: clickedStates.filter(s => s.country === 'CA').length, total: states.filter(s => s.country === 'CA').length },
-    };
+  const hoveredTimezone = useMemo(() => {
+    if (!hoveredRegion) return null;
+    return timezoneMap[hoveredRegion.code] || null;
+  }, [hoveredRegion, timezoneMap]);
 
-    const timezones = ['PST', 'MST', 'CST', 'EST', 'AKST', 'AST', 'NST', 'HST'];
-    const byTimezone = timezones.map(tz => ({
-      tz,
-      current: clickedStates.filter(s => s.timezone === tz).length,
-      total: states.filter(s => s.timezone === tz).length,
+  // Statistics calculations
+  const { byCountry, byTimezone, byCoast } = useMemo(() => {
+    const byCountry = [
+      { label: 'United States', count: states.filter(s => clicked.includes(s.code)).length, total: states.length },
+    ];
+
+    const tzCounts: Record<string, number> = {};
+    const tzTotals: Record<string, number> = {};
+    states.forEach(s => {
+      tzTotals[s.timezone] = (tzTotals[s.timezone] || 0) + 1;
+      if (clicked.includes(s.code)) {
+        tzCounts[s.timezone] = (tzCounts[s.timezone] || 0) + 1;
+      }
+    });
+
+    const byTimezone = Object.keys(tzTotals).map(tz => ({
+      label: tz,
+      count: tzCounts[tz] || 0,
+      total: tzTotals[tz],
     }));
 
-    const coasts = ['West Coast', 'East Coast', 'Gulf Coast', 'Inland'];
-    const byCoast = coasts.map(coast => ({
-      coast,
-      current: clickedStates.filter(s => s.coast === coast).length,
-      total: states.filter(s => s.coast === coast).length,
+    const coastCounts: Record<string, number> = {};
+    const coastTotals: Record<string, number> = {};
+    states.forEach(s => {
+      const coast = s.coast || 'Inland';
+      coastTotals[coast] = (coastTotals[coast] || 0) + 1;
+      if (clicked.includes(s.code)) {
+        coastCounts[coast] = (coastCounts[coast] || 0) + 1;
+      }
+    });
+
+    const byCoast = Object.keys(coastTotals).map(coast => ({
+      label: coast,
+      count: coastCounts[coast] || 0,
+      total: coastTotals[coast],
     }));
 
     return { byCountry, byTimezone, byCoast };
@@ -100,22 +184,78 @@ export default function MapExplorerPage() {
     if (clicked.length === 0) return null;
     const exploredStates = states.filter(s => clicked.includes(s.code) && s.trivia && s.trivia.length > 0);
     if (exploredStates.length === 0) return null;
-    const randomState = exploredStates[Math.floor(Math.random() * exploredStates.length)];
-    const triviaList = randomState.trivia || [];
-    const randomTrivia = triviaList[Math.floor(Math.random() * triviaList.length)];
-    return { name: randomState.name, text: randomTrivia };
-  }, [clicked.length, states]);
+    const seed = clicked.join('|');
+    const selectedState = exploredStates[hashString(seed) % exploredStates.length];
+    const triviaList = selectedState.trivia || [];
+    const trivia = triviaList[hashString(`${seed}:${selectedState.code}`) % triviaList.length];
+    return { name: selectedState.name, text: trivia };
+  }, [clicked, states]);
 
   useEffect(() => {
-    fetch(publicAsset('/data/states.json'))
-      .then((r) => r.json())
-      .then(setStates)
-      .catch(console.error);
+    return () => {
+      if (panelTimerRef.current) clearTimeout(panelTimerRef.current);
+      if (flightTimerRef.current) clearTimeout(flightTimerRef.current);
+    };
   }, []);
 
-  function handleRegionClick(code: string) {
+  useEffect(() => {
+    if (!milestonePopup) return;
+
+    const dismissMilestone = () => setMilestonePopup(null);
+    const timer = setTimeout(dismissMilestone, 2000);
+
+    window.addEventListener('keydown', dismissMilestone);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', dismissMilestone);
+    };
+  }, [milestonePopup]);
+
+  function buildRegionFlight(source?: RegionFlightSource): RegionFlight | null {
+    if (!source || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+
+    const panelLeft = Math.max(24, window.innerWidth - PANEL_WIDTH - 24);
+    const panelTop = Math.max(96, Math.min(window.innerHeight - 560, window.innerHeight * 0.16));
+    const targetWidth = 88;
+    const targetHeight = Math.max(44, targetWidth * (source.rect.height / source.rect.width));
+    const targetCenterX = panelLeft + 44;
+    const targetCenterY = panelTop + 80;
+    const sourceCenterX = source.rect.left + source.rect.width / 2;
+    const sourceCenterY = source.rect.top + source.rect.height / 2;
+
+    return {
+      ...source,
+      id: Date.now(),
+      dx: targetCenterX - sourceCenterX,
+      dy: targetCenterY - sourceCenterY,
+      sx: targetWidth / source.rect.width,
+      sy: targetHeight / source.rect.height,
+    };
+  }
+
+  function revealPanelAfterFlight(code: string, source?: RegionFlightSource) {
+    if (panelTimerRef.current) clearTimeout(panelTimerRef.current);
+    if (flightTimerRef.current) clearTimeout(flightTimerRef.current);
+
+    const flight = buildRegionFlight(source);
+    setPanelCode(null);
+    setRegionFlight(flight);
+
+    const delay = flight ? FLIGHT_DURATION_MS : 0;
+    panelTimerRef.current = setTimeout(() => {
+      setPanelCode(code);
+    }, delay);
+    flightTimerRef.current = setTimeout(() => {
+      setRegionFlight(null);
+    }, delay + 80);
+  }
+
+  function handleRegionClick(code: string, flightSource?: RegionFlightSource) {
+    if (milestonePopup) return;
+
     const wasAlreadyClicked = clicked.includes(code);
     setActiveCode(code);
+    revealPanelAfterFlight(code, flightSource);
     
     if (!wasAlreadyClicked) {
       playSound('click');
@@ -124,9 +264,22 @@ export default function MapExplorerPage() {
       const newCount = clicked.length + 1;
       const milestone = MILESTONES.find(m => m.count === newCount);
       if (milestone) {
-        playSound('badge');
+        playSound('milestone');
+        triggerMilestoneCeremony();
         setMilestonePopup(milestone);
-        setTimeout(() => setMilestonePopup(null), 3000);
+      }
+
+      // Check Cluster Completion (B3)
+      for (const [clusterName, codes] of Object.entries(CLUSTER_CHECKPOINTS)) {
+        const newlyCompleted = codes.every(c => c === code || clicked.includes(c));
+        const previouslyCompleted = codes.every(c => clicked.includes(c));
+        if (newlyCompleted && !previouslyCompleted) {
+          playSound('cluster');
+          triggerClusterComplete();
+          setCompletedCluster(clusterName);
+          setTimeout(() => setCompletedCluster(null), 3500);
+          break;
+        }
       }
     }
   }
@@ -137,349 +290,497 @@ export default function MapExplorerPage() {
     }
   }
 
+  // Budget calculations
+  const budgetPct = Math.min(100, (elapsedBudget / 900) * 100);
+  const budgetMinutes = Math.floor(elapsedBudget / 60);
+  const budgetSeconds = elapsedBudget % 60;
+  const budgetStatusColor = elapsedBudget > 900 ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.5)]' : elapsedBudget > 600 ? 'bg-atlas-gold shadow-[0_0_12px_rgba(255,153,0,0.5)]' : 'bg-atlas-accent shadow-[0_0_12px_rgba(46,125,50,0.5)]';
+  const selectedState = useMemo(() => states.find((state) => state.code === panelCode) ?? null, [panelCode, states]);
+  const MilestoneIcon = milestonePopup ? MILESTONE_ICON_COMPONENTS[milestonePopup.count] ?? Trophy : Trophy;
+
   return (
-    <AppLayout variant="training">
-      <TrainingTopBar
-        explored={clicked.length}
-        total={TOTAL}
-        label="Map Explorer"
-        onExit={handleExit}
-      />
-
+    <AppLayout>
       {phase === 'intro' ? (
-        <main className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#232F3E]">
-          <section className="relative flex-1 min-h-56 lg:min-h-0 overflow-hidden bg-[#232F3E] flex items-center justify-center border-r border-white/10">
-            <div
-              className="absolute inset-0 opacity-[0.14] pointer-events-none"
-              style={{ backgroundImage: `url("${publicAsset('/assets/patterns/topo-pattern.png')}")`, backgroundSize: '420px' }}
-            />
-            <img
-              src={publicAsset('/assets/illustrations/map-bg.png')}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-25"
-            />
-            <img
-              src={publicAsset('/maps/north-america.svg')}
-              alt=""
-              className="relative z-10 h-full w-full max-w-3xl object-contain p-8 lg:p-14 opacity-80 drop-shadow-[0_30px_70px_rgba(0,0,0,0.4)]"
-            />
-            <img
-              src={publicAsset('/assets/illustrations/globe-illustration.png')}
-              alt=""
-              className="absolute bottom-5 left-6 z-20 w-24 sm:w-32 lg:w-40 opacity-90 drop-shadow-2xl"
-            />
-            <img
-              src={publicAsset('/assets/illustrations/compass-rose.svg')}
-              alt=""
-              className="absolute right-5 top-5 z-20 w-20 sm:w-28 opacity-45"
-            />
-            {PIN_POSITIONS.map((pin) => (
-              <img
-                key={`${pin.top}-${pin.left}`}
-                src={publicAsset('/assets/stickers/pin-bounce.gif')}
-                alt=""
-                className="absolute z-30 w-12 sm:w-14 -translate-x-1/2 -translate-y-full drop-shadow-[0_16px_18px_rgba(0,0,0,0.35)]"
-                style={{ top: pin.top, left: pin.left }}
-              />
-            ))}
-            <div className="absolute bottom-8 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/10 bg-black/45 px-6 py-2 text-center shadow-2xl backdrop-blur-md">
-              <div className="text-[9px] font-black uppercase tracking-wider text-white/45">Training Zone</div>
-              <div className="text-sm font-black uppercase tracking-tight text-[#00A8A2]">North America Atlas</div>
-            </div>
-          </section>
-
-          <section className="relative w-full lg:w-[460px] overflow-hidden bg-[#F5F0E8] p-7 sm:p-10 lg:p-12 flex flex-col justify-center gap-7 paper-texture">
-            <video
-              className="absolute inset-0 h-full w-full object-cover opacity-[0.05] pointer-events-none"
-              src={publicAsset('/assets/video/paper-bg.mp4')}
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="inline-flex items-center gap-2.5 bg-[#232F3E]/5 px-3 py-1.5 rounded-lg border border-[#232F3E]/10">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#232F3E]/40">
-                  Phase 00
-                </span>
-                <div className="w-px h-3 bg-[#232F3E]/10" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#00A8A2]">
-                  Atlas calibration
-                </span>
+        <main className="flex min-h-screen items-center justify-center bg-atlas-warm p-4 sm:p-6 lg:p-8">
+          <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-atlas-card shadow-2xl border border-atlas-border">
+            <div className="grid grid-cols-1 lg:grid-cols-12">
+              {/* Left Column: Visual Map Preview */}
+              <div className="relative flex items-center justify-center bg-atlas-warm p-8 lg:col-span-7 overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(46,125,50,0.15),transparent_70%)]" />
+                <img
+                  src={publicAsset('/maps/north-america.svg')}
+                  alt=""
+                  className="relative z-10 h-full w-full max-w-3xl object-contain p-8 lg:p-14 opacity-80 drop-shadow-[0_30px_70px_rgba(0,0,0,0.5)]"
+                />
+                <img
+                  src={publicAsset('/assets/illustrations/globe-illustration.png')}
+                  alt=""
+                  className="absolute bottom-5 left-6 z-20 w-24 sm:w-32 lg:w-40 opacity-90 drop-shadow-2xl"
+                />
+                <img
+                  src={publicAsset('/assets/illustrations/compass-rose.svg')}
+                  alt=""
+                  className="absolute right-5 top-5 z-20 w-20 sm:w-28 opacity-45"
+                />
+                {PIN_POSITIONS.map((pin) => (
+                  <img
+                    key={`${pin.top}-${pin.left}`}
+                    src={publicAsset('/assets/stickers/pin-bounce.gif')}
+                    alt=""
+                    className="absolute z-30 w-10 sm:w-14 drop-shadow-lg"
+                    style={{ top: pin.top, left: pin.left }}
+                  />
+                ))}
               </div>
-            </div>
 
-            <div className="relative z-10">
-              <h1 className="text-4xl sm:text-5xl font-black leading-tight text-[#232F3E] slide-up">
-                Map Explorer
-              </h1>
-            </div>
-
-            <p className="relative z-10 text-base font-medium leading-relaxed text-[#2D3B2F]/70 slide-up stagger-1">
-              Your mission is to explore all {TOTAL} states and provinces of North America. Click each region to learn about its capital, timezone, and coast.
-            </p>
-
-            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-              {OBJECTIVES.map((objective, idx) => (
-                <div key={objective.label} className={`rounded-2xl border-2 border-[#232F3E]/5 bg-white/75 p-4 shadow-sm backdrop-blur-sm pop-in ${idx === 0 ? 'stagger-1' : idx === 1 ? 'stagger-2' : idx === 2 ? 'stagger-3' : 'stagger-4'}`}>
-                  <div className="text-[9px] font-black uppercase tracking-wider text-[#232F3E]/35">
-                    {objective.label}
+              {/* Right Column: Expedition Briefing */}
+              <div className="flex flex-col justify-between p-8 sm:p-10 lg:col-span-5 lg:p-12 bg-atlas-card">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-atlas-warm px-4 py-1.5 text-xs font-black uppercase tracking-widest text-atlas-accent border border-atlas-border shadow-sm">
+                    <span>🧭</span> Explore the Map
                   </div>
-                  <div className="mt-1 text-sm font-bold leading-snug text-[#232F3E]">
-                    {objective.value}
+                  <h1 className="mt-6 font-serif text-4xl sm:text-5xl font-black tracking-tight text-atlas-ink leading-none">
+                    Discover North America
+                  </h1>
+                  <p className="mt-4 text-sm sm:text-base text-atlas-muted leading-relaxed font-medium">
+                    Explore and memorize the geography of North America. Select regions to reveal useful facts, timezones, and regional notes.
+                  </p>
+
+                  <div className="mt-8 space-y-4 border-t border-atlas-border pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-atlas-warm text-xl shadow-inner border border-atlas-border text-atlas-ink">
+                        📍
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-atlas-ink">Interactive Map</h3>
+                        <p className="text-xs text-atlas-muted font-medium">Click regions to discover facts and timezones.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center h-12 w-12 shrink-0 rounded-2xl bg-atlas-warm text-xl shadow-inner border border-atlas-border text-atlas-ink">
+                        ⚡
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-atlas-ink">Timezone Mastery</h3>
+                        <p className="text-xs text-atlas-muted font-medium">Learn which states share each timezone.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            <div className="relative z-10 flex flex-col gap-4">
-              <button
-                onClick={() => setPhase('exploring')}
-                className="w-full btn-chunky btn-chunky-primary py-5 text-lg"
-              >
-                {allDone ? 'Return to Map' : 'Begin Exploration'}
-              </button>
-              {allDone && (
-                <button
-                  onClick={() => navigate('/train/complete')}
-                  className="w-full btn-chunky btn-chunky-orange py-5 text-lg"
-                >
-                  Continue to Results
-                </button>
-              )}
-              <p className="mt-2 text-center text-[10px] font-bold text-[#232F3E]/35">
-                {TOTAL} regions to explore
-              </p>
+                <div className="mt-10 flex flex-col gap-4">
+                  <button
+                    onClick={() => setPhase('exploring')}
+                    className="w-full btn-chunky btn-chunky-primary py-4 text-base shadow-lg"
+                  >
+                    {allDone ? 'Return to Map' : 'Begin Exploration'}
+                  </button>
+                  {allDone && (
+                    <button
+                      onClick={() => navigate('/train/complete')}
+                      className="w-full btn-chunky btn-chunky-orange py-4 text-base shadow-lg"
+                    >
+                      Continue to Results
+                    </button>
+                  )}
+                  <p className="mt-2 text-center text-xs font-bold text-atlas-muted">
+                    {clicked.length} / {states.length || TOTAL_REGIONS} regions explored
+                  </p>
+                </div>
+              </div>
             </div>
-          </section>
+          </div>
         </main>
       ) : (
-        <main className="flex-1 flex flex-col relative overflow-hidden bg-[#1F2937]">
-          <div className="flex-1 p-4 flex flex-col gap-3 min-h-0 relative">
-            <div className="z-10 flex flex-col sm:flex-row items-center gap-5 bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl">
-              <div className="flex-1 w-full">
-                <div className="flex justify-between items-end mb-2.5">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-white/30">EXPEDITION PROGRESS</span>
-                    <h2 className="text-white font-black text-xl tracking-tight">Interactive Map</h2>
-                  </div>
-                  <div className="text-right leading-none">
-                    <span className="text-3xl font-black text-[#00A8A2] tabular-nums">{clicked.length}</span>
-                    <span className="text-xs font-bold text-white/20 ml-2 tracking-wider">/ {TOTAL} Regions</span>
-                  </div>
-                </div>
-                <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden ring-4 ring-black/10">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#00A8A2] to-[#35D07F] rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(0,168,162,0.4)]"
-                    style={{ width: `${(clicked.length / TOTAL) * 100}%` }}
-                  />
-                </div>
-              </div>
-              
-              <div className="hidden sm:block h-12 w-px bg-white/10 mx-2" />
+        <main className="flex h-screen w-screen flex-col bg-atlas-warm overflow-hidden">
+          {/* Top Bar */}
+          <TrainingTopBar
+            explored={clicked.length}
+            total={states.length || TOTAL_REGIONS}
+            label="Discover North America"
+            onExit={handleExit}
+          />
 
-              <div className="flex items-center gap-5 w-full sm:w-auto">
-                <div className="flex gap-2.5 items-center bg-black/30 px-3.5 py-2 rounded-xl border border-white/5 shadow-inner flex-1 justify-center sm:justify-start">
-                  {MILESTONES.map((m) => (
-                    <div 
-                      key={m.count} 
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center text-base filter ${clicked.length >= m.count ? 'grayscale-0 opacity-100 scale-110 shadow-lg bg-white/10 border border-white/10' : 'grayscale opacity-20'} transition-all duration-500`}
-                      aria-label={`${m.label} milestone: ${clicked.length >= m.count ? 'Achieved' : 'Locked'}`}
-                    >
-                      <span aria-hidden="true">{m.icon}</span>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setShowLegend(!showLegend)}
-                  className={`flex flex-col items-center justify-center w-14 h-14 min-w-[56px] rounded-xl border transition-all duration-300 ${
-                    showLegend 
-                      ? 'bg-[#00A8A2]/20 border-[#00A8A2] text-[#00A8A2] shadow-[0_0_15px_rgba(0,168,162,0.2)]' 
-                      : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20'
-                  }`}
-                  aria-label={showLegend ? "Hide Map Legend" : "Show Map Legend"}
-                >
-                  <span className="text-xl mb-0.5" aria-hidden="true">🗺️</span>
-                  <span className="text-[8px] font-black uppercase tracking-wider leading-none">Legend</span>
-                </button>
-              </div>
+          {/* Time Budget Bar (B4) */}
+          <div className="w-full bg-atlas-card border-b border-atlas-border px-6 py-2 flex items-center justify-between text-xs shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-atlas-ink uppercase tracking-wider text-xs">Pace Monitor</span>
+              <span className="text-atlas-muted font-mono">({budgetMinutes}m {budgetSeconds}s / 15m)</span>
             </div>
+            <div className="flex-1 max-w-md mx-4 h-2 bg-atlas-warm rounded-full overflow-hidden border border-atlas-border shadow-inner">
+              <div className={`h-full transition-all duration-1000 ${budgetStatusColor}`} style={{ width: `${budgetPct}%` }} />
+            </div>
+            <span className={`font-black text-xs uppercase tracking-widest ${elapsedBudget > 900 ? 'text-rose-600 animate-pulse' : elapsedBudget > 600 ? 'text-atlas-gold' : 'text-atlas-accent'}`}>
+              {elapsedBudget > 900 ? 'Over Budget' : elapsedBudget > 600 ? 'Pace Warning' : 'On Pace'}
+            </span>
+          </div>
 
-            <div className="flex-1 overflow-hidden relative rounded-xl ring-1 ring-white/10 shadow-2xl">
+          <div className="relative flex-1 overflow-hidden">
+            {/* Interactive Map */}
+            <div className="absolute inset-0 z-0 p-4 sm:p-6 lg:p-8">
               <InteractiveMap
                 onRegionClick={handleRegionClick}
+                onRegionHover={(code, pos) => setHoveredRegion(code && pos ? { code, pos } : null)}
                 highlightedCodes={clicked}
+                masteredCodes={clicked}
+                explorationOrder={explorationOrder}
+                pulsingClusterCodes={completedCluster ? CLUSTER_CHECKPOINTS[completedCluster] || [] : []}
                 activeCode={activeCode}
                 mode="explore"
                 timezoneMap={timezoneMap}
                 hoveredTimezone={hoveredTimezone}
               />
-
-              {showLegend && (
-                <div className="absolute top-3 left-3 z-20 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="rounded-xl border border-white/10 bg-[#0d1a0d]/85 p-3 shadow-2xl backdrop-blur-md">
-                    <div className="flex items-center justify-between mb-3 px-1">
-                      <p className="text-[8px] font-black uppercase tracking-wider text-white/40">Timezone Guide</p>
-                      <button onClick={() => setShowLegend(false)} className="text-white/20 hover:text-white/60">✕</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                      {Object.entries(TZ_COLORS).map(([tz, color]) => (
-                        <div 
-                          key={tz} 
-                          className={`flex items-center gap-2.5 p-1 rounded-md transition-all cursor-default ${hoveredTimezone === tz ? 'bg-white/10 shadow-inner' : 'hover:bg-white/5'}`}
-                          onMouseEnter={() => setHoveredTimezone(tz)}
-                          onMouseLeave={() => setHoveredTimezone(null)}
-                        >
-                          <div className={`w-2.5 h-2.5 rounded-full ${color} shadow-[0_0_8px_rgba(0,0,0,0.5)] ${hoveredTimezone === tz ? 'ring-2 ring-white/50' : ''}`} />
-                          <span className={`text-[9px] font-bold transition-colors ${hoveredTimezone === tz ? 'text-[#00A8A2]' : 'text-white/80'}`}>{tz}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {milestonePopup && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" aria-live="polite">
-                  <div className="bg-[#232F3E] border-2 border-[#FEBD69] rounded-3xl p-8 shadow-[0_0_100px_rgba(254,189,105,0.3)] animate-in zoom-in-75 duration-500 text-center">
-                    <div className="text-6xl mb-4">{milestonePopup.icon}</div>
-                    <div className="text-[#FEBD69] text-[10px] font-black uppercase tracking-wider mb-1">Milestone Reached!</div>
-                    <div className="text-3xl font-black text-white">{milestonePopup.label}</div>
-                    <div className="text-white/40 text-[10px] font-bold mt-2 tracking-widest">{clicked.length} Regions Explored</div>
-                  </div>
-                </div>
-              )}
-
-              {activeState && (
-                <div className="pointer-events-none absolute inset-x-4 top-4 z-30 flex max-h-[calc(100%-2rem)] justify-end animate-in fade-in slide-in-from-right-4 duration-300 sm:inset-x-auto sm:right-4 sm:w-80">
-                  <StateInfoPanel state={activeState} onClose={() => setActiveCode(null)} />
-                </div>
-              )}
-
-              {allDone && (
-                <div className="absolute bottom-6 right-6 z-40 animate-in fade-in slide-in-from-bottom-4 mb-16 sm:mb-0">
-                  <button
-                    onClick={() => navigate('/train/complete')}
-                    className="btn-chunky btn-chunky-orange py-3 px-6 text-sm flex items-center gap-2"
-                  >
-                    Continue to Results <span className="text-xl">-&gt;</span>
-                  </button>
-                </div>
-              )}
             </div>
 
-          {/* Atlas Passport Toggle */}
-          <button
-            onClick={() => setPassportOpen(!passportOpen)}
-            className={`absolute bottom-3 left-3 z-50 flex items-center gap-2 btn-chunky px-4 py-2.5 text-[10px] transition-all ${passportOpen ? 'btn-chunky-orange' : 'btn-chunky-primary'}`}
-          >
-            <span>{passportOpen ? '📖' : '📘'}</span>
-            {passportOpen ? 'Close Passport' : 'Atlas Passport'}
-          </button>
+            {regionFlight && (
+              <div
+                key={regionFlight.id}
+                className="fixed pointer-events-none z-[65] origin-center animate-region-fly-to-panel"
+                style={{
+                  left: regionFlight.rect.left,
+                  top: regionFlight.rect.top,
+                  width: regionFlight.rect.width,
+                  height: regionFlight.rect.height,
+                  ['--fly-x' as string]: `${regionFlight.dx}px`,
+                  ['--fly-y' as string]: `${regionFlight.dy}px`,
+                  ['--fly-scale-x' as string]: regionFlight.sx,
+                  ['--fly-scale-y' as string]: regionFlight.sy,
+                }}
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox={`${regionFlight.bbox.x} ${regionFlight.bbox.y} ${regionFlight.bbox.width} ${regionFlight.bbox.height}`}
+                  className="h-full w-full overflow-visible drop-shadow-2xl"
+                >
+                  <path
+                    d={regionFlight.pathD}
+                    fill={regionFlight.fill}
+                    stroke="var(--atlas-accent)"
+                    strokeWidth="2.5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+              </div>
+            )}
 
-          {/* Atlas Passport Drawer */}
-          <div 
-            className={`absolute inset-x-0 bottom-0 z-[60] bg-[#101b12]/95 backdrop-blur-xl border-t border-white/10 transition-transform duration-500 ease-in-out shadow-[0_-20px_50px_rgba(0,0,0,0.5)] ${passportOpen ? 'translate-y-0' : 'translate-y-full'}`}
-            style={{ height: '320px' }}
-          >
-            <button 
-              onClick={() => setPassportOpen(false)}
-              className="absolute -top-12 right-6 bg-[#101b12]/90 p-2 rounded-t-xl border-t border-x border-white/10 text-white/40 hover:text-white transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+            {/* Region Hover Tooltip (B1) */}
+            {hoveredRegion && !activeCode && (
+              <div 
+                className="fixed z-50 pointer-events-none bg-atlas-ink/95 text-white px-4 py-2.5 rounded-2xl border border-white/20 shadow-2xl backdrop-blur-md animate-pop-in flex items-center gap-3"
+                style={{ top: hoveredRegion.pos.y - 60, left: hoveredRegion.pos.x - 80 }}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-atlas-accent animate-pulse" />
+                <div>
+                  <div className="text-xs font-black tracking-tight">{states.find(s => s.code === hoveredRegion.code)?.name || hoveredRegion.code}</div>
+                  <div className="text-xs text-white/60 font-mono font-bold uppercase tracking-widest">{hoveredTimezone || 'UTC'}</div>
+                </div>
+              </div>
+            )}
 
-            <div className="h-full overflow-y-auto p-6 scrollbar-hide">
-              <div className="flex flex-col md:flex-row gap-8">
-                {/* Left: Overall & Countries */}
-                <div className="flex-1 space-y-6">
-                  <div>
-                    <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Exploration Progress</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                        <div className="flex justify-between items-end mb-2">
-                          <span className="text-[10px] font-black text-white uppercase">United States</span>
-                          <span className="text-xs font-mono text-[#00A8A2]">{stats.byCountry.US.current}/{stats.byCountry.US.total}</span>
-                        </div>
-                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#00A8A2]" style={{ width: `${(stats.byCountry.US.current / stats.byCountry.US.total) * 100}%` }} />
-                        </div>
-                      </div>
-                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                        <div className="flex justify-between items-end mb-2">
-                          <span className="text-[10px] font-black text-white uppercase">Canada</span>
-                          <span className="text-xs font-mono text-[#C41E3A]">{stats.byCountry.CA.current}/{stats.byCountry.CA.total}</span>
-                        </div>
-                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#C41E3A]" style={{ width: `${(stats.byCountry.CA.current / stats.byCountry.CA.total) * 100}%` }} />
-                        </div>
-                      </div>
+            {/* Milestone Ceremony (D4) */}
+            {milestonePopup && (
+              <div
+                className="fixed inset-0 z-[120] flex items-center justify-center bg-atlas-ink/90 px-5 text-center text-white backdrop-blur-md animate-milestone-takeover"
+                aria-modal="true"
+                role="dialog"
+                aria-labelledby="milestone-title"
+                aria-describedby="milestone-subtitle"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMilestonePopup(null)}
+                  className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/70 shadow-2xl transition hover:bg-white/15 hover:text-white sm:right-6 sm:top-6"
+                  aria-label="Dismiss milestone ceremony"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <div className="relative flex w-full max-w-3xl flex-col items-center">
+                  <div className="absolute -inset-x-8 top-1/2 h-28 -translate-y-1/2 bg-atlas-gold/20 blur-3xl" aria-hidden="true" />
+                  <div className="relative mb-8 flex h-28 w-28 items-center justify-center rounded-full border border-atlas-gold/50 bg-atlas-gold text-atlas-ink shadow-[0_0_70px_rgba(249,168,37,0.45)] sm:h-36 sm:w-36">
+                    <MilestoneIcon className="h-14 w-14 animate-milestone-icon sm:h-20 sm:w-20" strokeWidth={1.8} aria-hidden="true" />
+                  </div>
+                  <p className="relative mb-3 text-xs font-black uppercase tracking-[0.4em] text-atlas-gold">
+                    Milestone achieved
+                  </p>
+                  <h2 id="milestone-title" className="relative font-display text-5xl font-black leading-none tracking-normal sm:text-7xl">
+                    {milestonePopup.label} reached
+                  </h2>
+                  <p id="milestone-subtitle" className="relative mt-5 text-base font-bold text-white/75 sm:text-xl">
+                    {milestonePopup.count} regions explored
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Cluster Completion Popup (B3) */}
+            {completedCluster && (
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 bg-atlas-card border-2 border-atlas-accent text-atlas-ink px-8 py-5 rounded-3xl shadow-2xl flex items-center gap-4 animate-bounce-in backdrop-blur-md">
+                <span className="text-3xl animate-bounce">✨</span>
+                <div>
+                  <div className="text-xs font-black uppercase tracking-widest text-atlas-accent">Regional Cluster Mastered</div>
+                  <div className="text-xl font-black text-atlas-ink">{completedCluster}</div>
+                </div>
+              </div>
+            )}
+
+            {/* State Info Panel */}
+            {selectedState ? (
+              <div className="absolute right-6 top-6 z-[55] w-[min(340px,calc(100vw-3rem))] animate-panel-after-flight">
+                <StateInfoPanel
+                  key={selectedState.code}
+                  state={selectedState}
+                  onSaveFact={saveJournalEntry}
+                  onClose={() => {
+                    setActiveCode(null);
+                    setPanelCode(null);
+                    setRegionFlight(null);
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="absolute bottom-6 right-6 z-10 hidden w-80 flex-col gap-4 sm:flex lg:w-96 animate-fade-in">
+                <div className="rounded-3xl bg-atlas-card p-6 shadow-2xl border border-atlas-border backdrop-blur-md">
+                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-atlas-border">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-atlas-warm text-atlas-ink shadow-inner border border-atlas-border">
+                      🧭
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-atlas-ink">Expedition Status</h3>
+                      <p className="text-xs text-atlas-muted font-medium">Click a region to learn more</p>
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Coastal Achievements</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {stats.byCoast.map(c => (
-                        <div key={c.coast} className="bg-white/5 px-3 py-2 rounded-xl border border-white/5 flex items-center gap-3">
-                          <span className="text-[9px] font-bold text-white/60 uppercase">{c.coast}</span>
-                          <span className={`text-[10px] font-mono ${c.current === c.total ? 'text-[#22C55E]' : 'text-white'}`}>
-                            {c.current === c.total ? '✓' : `${c.current}/${c.total}`}
-                          </span>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-xs font-black text-atlas-ink mb-1">
+                        <span>Progress</span>
+                        <span className="font-mono">{clicked.length} / {states.length || TOTAL_REGIONS}</span>
+                      </div>
+                      <div className="h-2 w-full bg-atlas-warm rounded-full overflow-hidden border border-atlas-border shadow-inner">
+                        <div
+                          className="h-full bg-atlas-accent transition-all duration-500 shadow-[0_0_10px_rgba(46,125,50,0.5)]"
+                          style={{ width: `${(clicked.length / (states.length || TOTAL_REGIONS)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {allDone && (
+                      <div className="pt-2 animate-fade-in">
+                        <button
+                          onClick={() => navigate('/train/complete')}
+                          className="w-full btn-chunky btn-chunky-orange py-3 text-sm shadow-lg flex items-center justify-center gap-2"
+                        >
+                          Continue to Results <span>➔</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Legend Toggle */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowLegend(!showLegend)}
+                    className="flex items-center gap-2 rounded-full bg-atlas-card px-4 py-2 text-xs font-black uppercase tracking-widest text-atlas-muted hover:text-atlas-ink border border-atlas-border shadow-md transition-all"
+                  >
+                    <span>🏷️</span> {showLegend ? 'Hide Legend' : 'Show Legend'}
+                  </button>
+                </div>
+
+                {showLegend && (
+                  <div className="rounded-3xl bg-atlas-card p-6 shadow-2xl border border-atlas-border animate-pop-in backdrop-blur-md">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-atlas-muted mb-4">Timezone Fills</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-3.5 w-3.5 rounded-lg bg-[#2E7D32] shadow-sm" />
+                        <span className="text-xs font-bold text-atlas-ink">Eastern (EST)</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-3.5 w-3.5 rounded-lg bg-[#1565C0] shadow-sm" />
+                        <span className="text-xs font-bold text-atlas-ink">Central (CST)</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-3.5 w-3.5 rounded-lg bg-[#EF6C00] shadow-sm" />
+                        <span className="text-xs font-bold text-atlas-ink">Mountain (MST)</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-3.5 w-3.5 rounded-lg bg-[#C62828] shadow-sm" />
+                        <span className="text-xs font-bold text-atlas-ink">Pacific (PST)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Atlas Passport Toggle */}
+            <button
+              onClick={() => setPassportOpen(!passportOpen)}
+              className={`absolute bottom-6 left-6 z-50 flex items-center gap-2 btn-chunky px-5 py-3 text-xs shadow-2xl transition-all ${passportOpen ? 'btn-chunky-orange' : 'btn-chunky-primary'}`}
+            >
+              <span>{passportOpen ? '📖' : '🛂'}</span>
+              {passportOpen ? 'Close Passport' : 'Atlas Passport'}
+            </button>
+
+            {/* Atlas Passport Drawer */}
+            <div
+              className={`absolute bottom-0 left-0 right-0 z-40 max-h-[85vh] w-full overflow-y-auto rounded-t-[3rem] bg-atlas-warm p-8 sm:p-10 lg:p-12 transition-transform duration-500 ease-in-out border-t border-atlas-border shadow-[0_-20px_50px_rgba(0,0,0,0.15)] ${
+                passportOpen ? 'translate-y-0' : 'translate-y-full'
+              }`}
+            >
+              <div className="mx-auto max-w-6xl pb-16 pt-6">
+                <div className="mb-10 flex items-center justify-between border-b border-atlas-border pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-atlas-warm text-2xl shadow-inner border border-white/10 text-atlas-ink">
+                      🛂
+                    </div>
+                    <div>
+                      <h2 className="font-serif text-3xl font-black text-atlas-ink tracking-tight">Atlas Passport</h2>
+                      <p className="text-xs text-atlas-muted font-medium mt-0.5">Your Exploration Progress</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPassportOpen(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl bg-atlas-card text-atlas-muted hover:bg-atlas-border hover:text-atlas-ink border border-atlas-border transition-all"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+                  {/* Stats by Country */}
+                  <div className="rounded-3xl bg-atlas-card p-6 border border-atlas-border shadow-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-atlas-gold mb-6 flex items-center gap-2">
+                      <span>🇺🇸</span> Countries
+                    </h3>
+                    <div className="space-y-5">
+                      {byCountry.map((item) => (
+                        <div key={item.label}>
+                          <div className="flex justify-between text-xs font-bold text-white mb-1.5">
+                            <span>{item.label}</span>
+                            <span className="font-mono text-atlas-muted">{item.count} / {item.total}</span>
+                          </div>
+                          <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                            <div
+                              className="h-full bg-atlas-gold transition-all duration-500 shadow-[0_0_10px_rgba(255,153,0,0.5)]"
+                              style={{ width: `${(item.count / item.total) * 100}%` }}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </div>
 
-                {/* Right: Timezones */}
-                <div className="w-full md:w-80">
-                  <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Timezone Stamps</h3>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5 grid grid-cols-2 gap-3">
-                    {stats.byTimezone.map(tz => (
-                      <div key={tz.tz} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${TZ_COLORS[tz.tz]}`} />
-                          <span className="text-[10px] font-bold text-white/50">{tz.tz}</span>
+                  {/* Stats by Timezone */}
+                  <div className="rounded-3xl bg-atlas-card p-6 border border-atlas-border shadow-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-atlas-accent mb-6 flex items-center gap-2">
+                      <span>⏰</span> Timezones
+                    </h3>
+                    <div className="space-y-5">
+                      {byTimezone.map((item) => (
+                        <div key={item.label}>
+                          <div className="flex justify-between text-xs font-bold text-white mb-1.5">
+                            <span>{item.label}</span>
+                            <span className="font-mono text-atlas-muted">{item.count} / {item.total}</span>
+                          </div>
+                          <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                            <div
+                              className="h-full bg-atlas-accent transition-all duration-500 shadow-[0_0_10px_rgba(46,125,50,0.5)]"
+                              style={{ width: `${(item.count / item.total) * 100}%` }}
+                            />
+                          </div>
                         </div>
-                        <span className="text-[10px] font-mono text-white/80">{tz.current}/{tz.total}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Far Right: Specialty Insight (Dataset use) */}
-                <div className="hidden lg:block w-64 border-l border-white/5 pl-8">
-                  <h3 className="text-white font-black text-xs tracking-widest mb-3 opacity-50">Atlas Trivia</h3>
-                  <div className="space-y-4">
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                      <p className="text-[8px] font-black text-[#00A8A2] uppercase tracking-wider mb-1">Knowledge Coverage</p>
-                      <p className="text-xl font-mono text-white font-black">{Math.round((clicked.length / TOTAL) * 100)}%</p>
+                      ))}
                     </div>
-                    
-                    {passportTrivia ? (
-                        <div className="bg-white/5 rounded-2xl p-4 border border-dashed border-[#00A8A2]/30">
-                          <p className="text-[8px] font-black text-[#FF9900] uppercase tracking-wider mb-1">Did you know?</p>
-                          <p className="text-[10px] text-white/80 leading-relaxed font-medium">
+                  </div>
+
+                  {/* Stats by Coast */}
+                  <div className="rounded-3xl bg-atlas-card p-6 border border-atlas-border shadow-xl flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-atlas-ink mb-6 flex items-center gap-2">
+                        <span>🌊</span> Coastal Regions
+                      </h3>
+                      <div className="space-y-5">
+                        {byCoast.map((item) => (
+                          <div key={item.label}>
+                          <div className="flex justify-between text-xs font-bold text-atlas-ink mb-1.5">
+                              <span>{item.label}</span>
+                              <span className="font-mono text-atlas-muted">{item.count} / {item.total}</span>
+                            </div>
+                          <div className="h-2 w-full bg-atlas-warm rounded-full overflow-hidden border border-atlas-border shadow-inner">
+                              <div
+                                className="h-full bg-atlas-ink/60 transition-all duration-500"
+                                style={{ width: `${(item.count / item.total) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Passport Trivia */}
+                    <div className="mt-8 rounded-2xl bg-atlas-card p-5 border border-atlas-border shadow-inner">
+                      {passportTrivia ? (
+                        <div>
+                          <p className="text-xs font-black text-atlas-gold uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span>💡</span> Regional Note
+                          </p>
+                          <p className="text-xs text-atlas-ink leading-relaxed font-medium">
                             {passportTrivia.text}
                           </p>
-                          <p className="text-[8px] text-white/30 mt-2 text-right">— {passportTrivia.name}</p>
+                          <p className="text-xs text-atlas-muted mt-3 text-right font-medium">— {passportTrivia.name}</p>
                         </div>
-                    ) : (
-                      <div className="p-2 opacity-30 text-[9px] text-white leading-relaxed italic">
-                        "Select territories on the map to unlock regional intelligence and trivia insights."
-                      </div>
-                    )}
+                      ) : (
+                        <div className="p-3 opacity-40 text-xs text-atlas-muted leading-relaxed italic text-center">
+                          "Explore regions on the map to discover facts"
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </main>
-    )}
+
+          {/* First-Run Guided Tour (C1) */}
+          {tourStep >= 0 && (
+            <div className="absolute inset-0 z-[100] pointer-events-none">
+              <div className="absolute inset-0 bg-atlas-ink/60 pointer-events-auto" onClick={dismissTour} />
+              <div className="absolute bottom-1/3 left-1/2 -translate-x-1/2 pointer-events-auto animate-pop-in">
+                <div className="bg-atlas-card border-2 border-atlas-accent rounded-3xl p-6 shadow-2xl max-w-sm text-center">
+                  <div className="flex justify-center gap-1.5 mb-4">
+                    {[0, 1, 2].map(s => (
+                      <div key={s} className={`w-2 h-2 rounded-full transition-all ${s === tourStep ? 'bg-atlas-accent w-6' : 'bg-atlas-border'}`} />
+                    ))}
+                  </div>
+                  <p className="text-atlas-ink font-black text-lg mb-2">
+                    {tourStep === 0 && 'Click any region on the map to learn about it'}
+                    {tourStep === 1 && 'Read the facts, then click another region'}
+                    {tourStep === 2 && `Explore all ${TOTAL_REGIONS} regions, then test your knowledge!`}
+                  </p>
+                  <p className="text-atlas-muted text-sm mb-4">
+                    {tourStep === 0 && 'Each region has interesting facts and timezone info'}
+                    {tourStep === 1 && 'The info panel shows facts you can save to your journal'}
+                    {tourStep === 2 && 'You\'ll play 3 games to test what you\'ve learned'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (tourStep < 2) {
+                        setTourStep(tourStep + 1);
+                      } else {
+                        dismissTour();
+                      }
+                    }}
+                    className="btn-chunky btn-chunky-primary px-6 py-2 text-sm"
+                  >
+                    {tourStep < 2 ? 'Next' : "Let's Go!"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      )}
     </AppLayout>
   );
 }
