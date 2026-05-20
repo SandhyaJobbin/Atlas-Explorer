@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A player who visits exactly 63 non-DC regions sees the training-complete screen, not a stuck 63/64 counter
   3. Map waypoint/pointer markers appear within the visible map bounds on all screens
   4. The SVG renders at the correct aspect ratio on Chrome, Firefox, and Safari at 100% zoom (no width/height attribute override)
-**Plans**: TBD
+**Plans**: 01-01 (SVG ViewBox Fix), 01-02 (DC Reconciliation), 01-03 (Waypoint Verification)
 **UI hint**: yes
 
 ### Phase 2: Map Interaction and Z-Index Fixes
@@ -125,7 +125,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. SVG and Map Viewport Fixes | 0/TBD | Not started | - |
+| 1. SVG and Map Viewport Fixes | 0/3 | Planned | - |
 | 2. Map Interaction and Z-Index Fixes | 0/TBD | Not started | - |
 | 3. DataProvider Consolidation (D2) | 0/TBD | Not started | - |
 | 4. GameEvents Emitter and GameState Context (D1) | 0/TBD | Not started | - |
