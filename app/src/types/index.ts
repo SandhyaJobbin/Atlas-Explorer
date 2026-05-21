@@ -30,6 +30,8 @@ export interface StateEntry {
 
 export interface TrainingProgress {
   mapExplorerClicked: string[];
+  mapExplorerOrder: string[];
+  journalEntries: string[];
   completed: boolean;
 }
 
@@ -44,6 +46,8 @@ export interface GameAttempt {
   passed: boolean;
   stars: number;
   recordedAt: string;
+  mistakes?: string[];
+  corrects?: string[];
 }
 
 export interface GameState {
@@ -60,6 +64,8 @@ export interface GameState {
   streakPeak: number;
   attemptNumber: number;
   earnedBadges: string[];
+  mistakes?: string[];
+  corrects?: string[];
 }
 
 export interface GameDefinition {
@@ -85,6 +91,7 @@ export interface Session {
   demo?: boolean;
   games: GameState[];
   training: TrainingProgress;
+  reviewCompleted?: boolean;
 }
 
 // ─── Leaderboard ─────────────────────────────────────────────────────────────
@@ -122,6 +129,8 @@ export interface GameResult {
   totalCount: number;
   streakPeak: number;
   timerRatio?: number;
+  mistakes?: string[];
+  corrects?: string[];
 }
 
 export interface GameProps {

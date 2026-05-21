@@ -1,11 +1,11 @@
 import type { BadgeDef, EarnedBadge, GameResult, Session } from '@/types';
 
 export const BADGE_DEFS: BadgeDef[] = [
-  { id: 'first-blood',    name: 'First Blood' },
-  { id: 'perfect-agent',  name: 'Perfect Agent' },
+  { id: 'first-blood',    name: 'First Discovery' },
+  { id: 'perfect-agent',  name: 'Perfect Explorer' },
   { id: 'hot-streak',     name: 'Hot Streak' },
   { id: 'globe-trotter',  name: 'Globe Trotter' },
-  { id: 'diamond-agent',  name: 'Diamond Agent' },
+  { id: 'diamond-agent',  name: 'Diamond Explorer' },
   { id: 'star-collector', name: 'Star Collector' },
   { id: 'never-quit',     name: 'Never Quit' },
   { id: 'speed-run',      name: 'Speed Run' },

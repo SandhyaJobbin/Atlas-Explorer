@@ -183,7 +183,7 @@ async function main() {
       await page.waitForTimeout(3000);
     }
     await screenshot(page, '05-codedrop-midgame');
-  } catch (e) {
+  } catch {
     console.log('  (could not capture mid-game, capturing current state)');
     await screenshot(page, '05-codedrop-midgame');
   }

@@ -1,44 +1,35 @@
 import { useEffect, useState } from 'react';
-import { useAudio } from '@/hooks/useAudio';
 
 interface TypewriterProps {
   text: string;
   delay?: number;
   className?: string;
-  onComplete?: () => void;
 }
 
-export default function Typewriter({ text, delay = 0.03, className = '', onComplete }: TypewriterProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isFinished, setIsFinished] = useState(false);
-  const { playSound } = useAudio();
+export default function Typewriter({ text, delay = 0.03, className = '' }: TypewriterProps) {
+  const [visibleText, setVisibleText] = useState(text);
 
   useEffect(() => {
-    let currentIdx = 0;
-    setDisplayedText('');
-    setIsFinished(false);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const timeout = window.setTimeout(() => setVisibleText(text), 0);
+      return () => window.clearTimeout(timeout);
+    }
 
-    const interval = setInterval(() => {
-      if (currentIdx < text.length) {
-        setDisplayedText(text.slice(0, currentIdx + 1));
-        if (text[currentIdx] !== ' ') {
-          playSound('typewriter');
-        }
-        currentIdx++;
-      } else {
-        clearInterval(interval);
-        setIsFinished(true);
-        onComplete?.();
+    const reset = window.setTimeout(() => setVisibleText(''), 0);
+    let index = 0;
+    const interval = window.setInterval(() => {
+      index += 1;
+      setVisibleText(text.slice(0, index));
+      if (index >= text.length) {
+        window.clearInterval(interval);
       }
-    }, delay * 1000);
+    }, Math.max(10, delay * 1000));
 
-    return () => clearInterval(interval);
-  }, [text, delay, playSound, onComplete]);
+    return () => {
+      window.clearTimeout(reset);
+      window.clearInterval(interval);
+    };
+  }, [delay, text]);
 
-  return (
-    <span className={className}>
-      {displayedText}
-      {!isFinished && <span className="animate-pulse opacity-50 ml-0.5">_</span>}
-    </span>
-  );
+  return <span className={className}>{visibleText}</span>;
 }

@@ -22,7 +22,7 @@ export function ScorePopup({ x, y, score, onComplete }: ScorePopupProps) {
 
   return (
     <div
-      className="fixed z-[9999] pointer-events-none select-none font-black text-2xl text-[#FF9900] animate-score-float drop-shadow-[0_0_10px_rgba(255,153,0,0.5)]"
+      className="fixed z-[9999] pointer-events-none select-none font-black text-2xl text-atlas-gold animate-score-float drop-shadow-[0_0_10px_rgba(249,168,37,0.5)]"
       style={{
         left: x,
         top: y,

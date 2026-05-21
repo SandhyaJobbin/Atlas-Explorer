@@ -41,7 +41,21 @@
       "mcp__ide__getDiagnostics",
       "Bash(py -3 fix_ak_hi.py)",
       "Bash(python -c \":*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\anoop\\\\OneDrive\\\\Desktop\\\\AMZ\\\\app\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Get-ChildItem -Path \"src\\\\__tests__\" -Name)",
+      "WebFetch(domain:claudemarketplaces.com)",
+      "Bash(npx skills *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:blog.logrocket.com)",
+      "WebFetch(domain:dexie.org)",
+      "WebFetch(domain:www.codewithseb.com)",
+      "WebFetch(domain:vite.dev)",
+      "Bash(findstr \"tz\")"
     ]
   }
 }

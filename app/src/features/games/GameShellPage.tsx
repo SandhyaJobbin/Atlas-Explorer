@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
 import type { GameAttempt, GameState, EarnedBadge, GameResult } from '@/types';
 import { GAME_DEFINITIONS, getTotalScore } from '@/lib/session';
+import { resolveGameParam } from '@/lib/game-route';
+import { GameStateProvider } from '@/hooks/useGameState';
+import { gameEvents } from '@/hooks/useGameEvents';
 import AppLayout from '@/components/layout/AppLayout';
 import GameTopBar from '@/components/layout/GameTopBar';
-import IntelVault from '@/components/layout/IntelVault';
 import GameIntro from './GameIntro';
 import PassInterstitial from './PassInterstitial';
 import FailInterstitial from './FailInterstitial';
 import CodeDrop from './CodeDrop';
 import PinRush from './PinRush';
 import CityStack from './CityStack';
+import WaveLeaderboardWidget from '@/components/layout/WaveLeaderboardWidget';
+import ReviewRound from './ReviewRound';
 
 // ─── State machine ────────────────────────────────────────────────────────────
 
@@ -28,12 +32,14 @@ type ShellPhase =
   | { phase: 'intro';   gameIndex: number }
   | { phase: 'playing'; gameIndex: number; isRetry: boolean }
   | { phase: 'pass';    outcome: OutcomeData }
-  | { phase: 'fail';    outcome: OutcomeData };
+  | { phase: 'fail';    outcome: OutcomeData }
+  | { phase: 'review' };
 
 type ShellAction =
   | { type: 'START';   gameIndex: number; isRetry: boolean }
   | { type: 'PASS';    outcome: OutcomeData }
   | { type: 'FAIL';    outcome: OutcomeData }
+  | { type: 'START_REVIEW' }
   | { type: 'CONTINUE' }
   | { type: 'RETRY' };
 
@@ -45,6 +51,8 @@ function reducer(state: ShellPhase, action: ShellAction): ShellPhase {
       return { phase: 'pass', outcome: action.outcome };
     case 'FAIL':
       return { phase: 'fail', outcome: action.outcome };
+    case 'START_REVIEW':
+      return { phase: 'review' };
     case 'CONTINUE':
       if (state.phase === 'pass') {
         return { phase: 'intro', gameIndex: state.outcome.nextGameIndex };
@@ -71,20 +79,21 @@ export default function GameShellPage() {
   
   const queryParams = new URLSearchParams(location.search);
   const paramIndex = queryParams.get('game');
-  
-  const initialGameIndex = paramIndex !== null ? parseInt(paramIndex, 10) : (session?.currentGameIndex ?? 0);
+  const initialGameIndex = resolveGameParam(paramIndex, session?.currentGameIndex ?? 0);
   
   const [shellState, dispatch] = useReducer(reducer, {
     phase: 'intro',
     gameIndex: initialGameIndex,
   } as ShellPhase);
 
-  const [vaultOpen, setVaultOpen] = useState(false);
   const [streak, setStreak] = useState(0);
+  const hasEmittedStartRef = useRef(false);
 
   const currentGameIndex =
     shellState.phase === 'pass' || shellState.phase === 'fail'
       ? shellState.outcome.gameIndex
+      : shellState.phase === 'review'
+      ? 2
       : shellState.gameIndex;
 
   // Reset streak when game phase changes or game index changes
@@ -92,15 +101,48 @@ export default function GameShellPage() {
     setStreak(0);
   }, [shellState.phase, currentGameIndex]);
 
-  // If session is already completed on mount, go straight to results
+  // Emit gameStart when entering playing phase
   useEffect(() => {
-    if (session?.completed) {
-      navigate('/play/results', { replace: true });
+    if (shellState.phase === 'playing' && !hasEmittedStartRef.current) {
+      hasEmittedStartRef.current = true;
+      const baseline = session
+        ? getTotalScore(session) - session.games[shellState.gameIndex].score
+        : 0;
+      gameEvents.emit('gameStart', {
+        gameIndex: shellState.gameIndex,
+        isRetry: shellState.isRetry,
+        baselineScore: baseline,
+      });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (shellState.phase !== 'playing') {
+      hasEmittedStartRef.current = false;
+    }
+  }, [shellState.phase, session]);
+
+  // Emit scoreUpdate on streak changes
+  useEffect(() => {
+    gameEvents.emit('scoreUpdate', {
+      gameIndex: currentGameIndex,
+      score: 0,
+      streak,
+    });
+  }, [streak, currentGameIndex]);
+
+  // If session is already completed on mount, go straight to results (unless review needs to be completed, or explicitly re-playing a game via parameter)
+  useEffect(() => {
+    if (session?.completed && !paramIndex) {
+      const mistakeCodes = session.games.flatMap((g) => g.mistakes || []);
+      if (mistakeCodes.length > 0 && !session.reviewCompleted) {
+        dispatch({ type: 'START_REVIEW' });
+      } else {
+        navigate('/play/results', { replace: true });
+      }
+    }
+  }, [session?.completed, session?.reviewCompleted, paramIndex, navigate]);
 
   const handleGameComplete = useCallback(
     (gameIndex: number, result: GameResult) => {
+      gameEvents.emit('gameComplete', { gameIndex, result });
       const outcome = recordAttemptFull(gameIndex, result);
       const data: OutcomeData = {
         gameIndex:        outcome.gameIndex,
@@ -122,7 +164,12 @@ export default function GameShellPage() {
   function handleContinue() {
     if (shellState.phase !== 'pass') return;
     if (shellState.outcome.sessionCompleted) {
-      navigate('/play/results');
+      const mistakeCodes = session?.games.flatMap((g) => g.mistakes || []) ?? [];
+      if (mistakeCodes.length > 0 && !session?.reviewCompleted) {
+        dispatch({ type: 'START_REVIEW' });
+      } else {
+        navigate('/play/results');
+      }
     } else {
       dispatch({ type: 'CONTINUE' });
     }
@@ -133,7 +180,7 @@ export default function GameShellPage() {
   }
 
   function handleExit() {
-    if (window.confirm('Are you sure you want to exit the current mission? Progress in this game will not be saved.')) {
+    if (window.confirm('Are you sure you want to exit the current expedition? Progress in this game will not be saved.')) {
       navigate('/');
     }
   }
@@ -141,28 +188,26 @@ export default function GameShellPage() {
   // ── Derive top-bar props ──────────────────────────────────────────────────
 
   const currentDef = GAME_DEFINITIONS[currentGameIndex];
-  const gameLabel  = currentDef?.label ?? 'Game';
-  const totalScore = session ? getTotalScore(session) : 0;
+  const isReview = shellState.phase === 'review';
+  const gameLabel  = isReview ? 'Review Round' : (currentDef?.label ?? 'Game');
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!session) return null;
+  if (!session.games[currentGameIndex]) return null;
 
   const clearedCount  = session.games.filter((g) => g.passed).length;
   const totalGames    = GAME_DEFINITIONS.length;
 
   return (
+    <GameStateProvider>
     <AppLayout variant="game">
       <GameTopBar
         gameLabel={gameLabel}
-        score={totalScore}
         level={currentGameIndex + 1}
         totalLevels={totalGames}
         attemptNumber={(session.games[currentGameIndex]?.attempts?.length ?? 0) + 1}
         onExit={handleExit}
-        isVaultOpen={vaultOpen}
-        onVaultToggle={() => setVaultOpen(!vaultOpen)}
-        streak={streak}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -196,7 +241,7 @@ export default function GameShellPage() {
             <PassInterstitial
               gameLabel={shellState.outcome.game.label}
               attempt={shellState.outcome.attempt}
-              isFinalMission={shellState.outcome.sessionCompleted}
+              isFinalExpedition={shellState.outcome.sessionCompleted}
               newBadges={shellState.outcome.newBadges}
               onContinue={handleContinue}
             />
@@ -210,10 +255,17 @@ export default function GameShellPage() {
               onRetry={handleRetry}
             />
           )}
+
+          {shellState.phase === 'review' && (
+            <ReviewRound
+              onComplete={() => navigate('/play/results')}
+            />
+          )}
         </div>
-        
-        <IntelVault isOpen={vaultOpen} onClose={() => setVaultOpen(false)} />
       </div>
+
+      <WaveLeaderboardWidget isAnimating={shellState.phase !== 'playing'} />
     </AppLayout>
+    </GameStateProvider>
   );
 }

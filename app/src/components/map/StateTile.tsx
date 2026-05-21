@@ -1,15 +1,5 @@
-import type { StateEntry, Timezone } from '@/types';
-
-const TZ_BADGE: Record<Timezone, { bg: string; label: string }> = {
-  PST:  { bg: 'bg-blue-600',    label: 'PST' },
-  MST:  { bg: 'bg-orange-500',  label: 'MST' },
-  CST:  { bg: 'bg-green-600',   label: 'CST' },
-  EST:  { bg: 'bg-purple-600',  label: 'EST' },
-  AKST: { bg: 'bg-sky-700',     label: 'AK'  },
-  HST:  { bg: 'bg-cyan-600',    label: 'HST' },
-  AST:  { bg: 'bg-purple-800',  label: 'AST' },
-  NST:  { bg: 'bg-pink-700',    label: 'NST' },
-};
+import type { StateEntry } from '@/types';
+import { TZ_COLORS_HEX } from '@/lib/timezones';
 
 interface StateTileProps {
   state: StateEntry;
@@ -19,17 +9,17 @@ interface StateTileProps {
 }
 
 export default function StateTile({ state, visited, active, onClick }: StateTileProps) {
-  const tz = TZ_BADGE[state.timezone] ?? { bg: 'bg-gray-500', label: state.timezone };
+  const tzBg = TZ_COLORS_HEX[state.timezone] ?? 'bg-atlas-muted';
 
   let containerClass =
     'relative flex flex-col items-center justify-center gap-0.5 rounded-lg p-2 cursor-pointer select-none transition-all duration-150 border ';
 
   if (active) {
-    containerClass += 'bg-[#FF9900] border-[#FF9900] shadow-lg scale-105 z-10';
+    containerClass += 'bg-atlas-accent border-atlas-accent shadow-lg scale-105 z-10';
   } else if (visited) {
-    containerClass += 'bg-[#00A8A2]/15 border-[#00A8A2]/50 hover:bg-[#00A8A2]/25';
+    containerClass += 'bg-atlas-gold/15 border-atlas-gold/50 hover:bg-atlas-gold/25';
   } else {
-    containerClass += 'bg-[#1a2a1a] border-white/10 hover:border-white/30 hover:bg-[#243224]';
+    containerClass += 'bg-atlas-card border-atlas-border hover:border-atlas-muted hover:bg-atlas-warm';
   }
 
   return (
@@ -41,13 +31,13 @@ export default function StateTile({ state, visited, active, onClick }: StateTile
     >
       {/* Visited checkmark */}
       {visited && !active && (
-        <span className="absolute top-1 right-1 text-[#00A8A2] text-[10px] leading-none">✓</span>
+        <span className="absolute top-1 right-1 text-atlas-gold text-xs leading-none">✓</span>
       )}
 
       {/* State code */}
       <span
         className={`text-base font-black leading-none ${
-          active ? 'text-white' : visited ? 'text-[#00A8A2]' : 'text-white/40'
+          active ? 'text-white' : visited ? 'text-atlas-gold' : 'text-atlas-muted'
         }`}
       >
         {state.code}
@@ -55,8 +45,8 @@ export default function StateTile({ state, visited, active, onClick }: StateTile
 
       {/* State name */}
       <span
-        className={`text-[9px] leading-tight text-center max-w-full truncate ${
-          active ? 'text-white/90' : visited ? 'text-[#00A8A2]/70' : 'text-white/25'
+        className={`text-xs leading-tight text-center max-w-full truncate ${
+          active ? 'text-white/90' : visited ? 'text-atlas-ink/80' : 'text-atlas-muted/60'
         }`}
       >
         {state.name}
@@ -64,12 +54,13 @@ export default function StateTile({ state, visited, active, onClick }: StateTile
 
       {/* TZ badge */}
       <span
-        className={`text-[8px] font-bold px-1 py-0.5 rounded-sm leading-none mt-0.5 ${
-          active ? 'bg-white/30 text-white' : `${tz.bg} text-white ${visited ? 'opacity-90' : 'opacity-40'}`
+        className={`text-xs font-bold px-1 py-0.5 rounded-sm leading-none mt-0.5 ${
+          active ? 'bg-white/30 text-white' : `${tzBg} text-white ${visited ? 'opacity-90' : 'opacity-40'}`
         }`}
       >
-        {tz.label}
+        {state.timezone}
       </span>
     </button>
   );
 }
+

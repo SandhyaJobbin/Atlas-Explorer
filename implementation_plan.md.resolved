@@ -1,0 +1,106 @@
+# Map Explorer — Stability & Layout Overhaul
+
+Three compounding UX problems are making the map hard to use: the SVG repaints on every state change causing flicker, the "stamp pop" animation fires on every click, and the map's container is clipped at the top so users can never see Canada's northern territories — plus there's no visual distinction between the US and Canada.
+
+## Root Cause Analysis
+
+| Issue | Root Cause |
+|---|---|
+| **Flicker on every click** | The monolithic `useEffect` in `InteractiveMap.tsx` (line 188) re-registers ALL SVG pointer/keyboard listeners whenever any prop changes (`highlightedCodes`, `masteredCodes`, `activeCode`, etc.). React tears down and re-attaches all handlers on every click, causing a full SVG repaint cycle. |
+| **Region "pop" on every click** | `.is-highlighted` has `animation: region-stamp 0.4s` which fires every time the class is re-assigned — which happens on *every* render of the effect loop. |
+| **Map clipped at top** | `MapExplorerPage` uses `h-screen w-screen flex-col` but the map container div is `absolute inset-0 p-4 sm:p-6 lg:p-8`. The top bars (TrainingTopBar + Pace Monitor) consume ~90px, but the map gets `inset-0` within its `relative flex-1` parent, so it actually renders correctly — *however* the SVG map content starts above the viewport because the SVG `viewBox` positions Canada's north far above the rendered portion. The real issue is `min-w-[1200px]` forcing horizontal overflow which shifts the map origin. |
+| **No US/Canada border** | The SVG uses flat `#1F2937` strokes for all regions with no country-level grouping colour. |
+
+## Proposed Changes
+
+---
+
+### 1. `InteractiveMap.tsx` — Fix flicker + pop + add country borders
+
+#### [MODIFY] [InteractiveMap.tsx](file:///c:/Users/anoop/OneDrive/Desktop/AMZ/app/src/components/map/InteractiveMap.tsx)
+
+**Split the single large `useEffect` into two:**
+
+- **Effect A — Listener registration** (depends only on `svgContent`): Registers all `pointerenter`, `pointermove`, `pointerleave`, and `keydown` handlers once, using refs to read current prop values at call time. This prevents listener teardown on every state update.
+
+- **Effect B — Visual state update** (depends on all color/class props): Directly mutates `el.style.fill` and `el.className` for each region without touching event listeners. Uses `requestAnimationFrame` to batch the DOM writes so they happen in one paint cycle — eliminating the flash.
+
+**Reduce region pop animation:**
+- Remove `animation: region-stamp` from `.is-highlighted`. Replace with a simple `transition: fill 0.25s ease` which is already handled by `transition-all duration-300` on the container class.
+- Keep `cluster-pulse-glow` for the cluster completion celebration (that pop is intentional).
+
+**Add US/Canada country borders:**
+- Detect country from the SVG `id` prefix: `CA-*` = Canada, `US-*` = United States.
+- Add CSS rules for `.atlas-region-us` and `.atlas-region-ca` with distinct base strokes:
+  - **US regions**: stroke `#1E3A5F` (deep navy), stroke-width `0.8px`
+  - **Canada regions**: stroke `#5C1A1A` (deep crimson), stroke-width `0.8px`
+- Add a thicker **country border overlay** using CSS `[id^="US-"]` and `[id^="CA-"]` attribute selectors with a slightly wider stroke to create a visual "country skin".
+- In Effect A's setup loop, classify each element and add `atlas-region-us` or `atlas-region-ca` class.
+
+---
+
+### 2. `MapExplorerPage.tsx` — Fix map viewport clipping
+
+#### [MODIFY] [MapExplorerPage.tsx](file:///c:/Users/anoop/OneDrive/Desktop/AMZ/app/src/features/training/MapExplorerPage.tsx)
+
+**Fix the clipping issue:**
+
+The map container `<div className="absolute inset-0 z-0 p-4 sm:p-6 lg:p-8">` is fine, but `InteractiveMap` renders the SVG with `min-w-[1200px]` which forces horizontal overflow. The SVG's `viewBox` origin for the north-america map is at the top of the document — meaning Canada's north gets rendered but is scrolled off-screen due to the container's `overflow-auto`.
+
+Fix: Change the map container to use `overflow-hidden` and remove forced horizontal scrolling. Instead, let the SVG scale to fit its container using `preserveAspectRatio="xMidYMid meet"` — which means:
+- Remove `min-w-[1200px]` from `InteractiveMap.tsx`'s content class
+- Ensure the SVG fills the container with proper aspect ratio scaling
+- The initial zoom level (`zoom: 1`) should show the full continent
+
+**Ensure zoom-in/out actually works:**
+
+The current zoom code applies `transform: scale()` via CSS but the `MAX_ZOOM` cap is 5 and `MIN_ZOOM` is 0.5. This is correct, but the zoom buttons call `zoomBy(±0.25)` — the issue is the initial SVG is already very large (`min-w-[1200px]`), so at zoom=1 the user is seeing only a portion of it. Removing `min-w-[1200px]` and letting the SVG fill the container will make zoom=1 show the full continent, and zoom-in will then actually zoom in usefully.
+
+---
+
+### 3. `index.css` — Country border global keyframes (optional)
+
+#### [MODIFY] [index.css](file:///c:/Users/anoop/OneDrive/Desktop/AMZ/app/src/index.css)
+
+If needed, add `--atlas-us-stroke` and `--atlas-ca-stroke` CSS variables to the design token set.
+
+---
+
+## Visual Design for Country Borders
+
+```
+US States:   stroke #1E3A5F (dark navy blue),  stroke-width 0.8px  → subtle blue border feel
+Canada Prov: stroke #6B2121 (dark crimson red), stroke-width 0.8px → subtle red border feel
+
+Country outline (thicker, exterior only via CSS):
+  [id^="US-"] → box-shadow or drop-shadow effect using atlas-accent tint
+  [id^="CA-"] → distinct crimson tint
+```
+
+The borders are intentionally **thin and subtle** — not loud. The goal is that when the map transitions from individual state exploration to "complete map", you can still clearly tell which country each region belongs to.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Map initial fit** — Currently the SVG loads with `min-w-[1200px]` which makes the full map wider than the viewport, requiring horizontal scroll. Would you prefer:
+> - **(A) Full-fit (recommended)**: SVG scales to fill the container width, showing all of North America at once, and zoom-in actually zooms in.
+> - **(B) Keep large + scrollable**: Keep current behaviour but fix the top clipping.
+
+> [!NOTE]
+> **Canada data** — The current `CLUSTER_CHECKPOINTS` only covers US regions. Should Canadian provinces also get cluster groupings (e.g. "Western Canada", "Central Canada", "Maritime Provinces")? This is separate work and not included in this plan.
+
+---
+
+## Verification Plan
+
+### Automated
+- `npm run build` in `app/` to confirm no TypeScript errors
+
+### Manual
+1. Load map explorer → confirm **no flicker** when clicking states
+2. Click multiple states in rapid succession → confirm **no pop animation** on already-explored states
+3. Zoom in/out with `+`/`-` buttons → confirm zoom **actually increases/decreases** map scale visibly
+4. Scroll to the north of the map → confirm **Yukon, Northwest Territories, Nunavut are visible**
+5. Hover over a US state vs a Canadian province → confirm **different coloured borders**

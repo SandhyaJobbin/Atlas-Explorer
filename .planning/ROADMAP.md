@@ -109,8 +109,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 **Plans:**
-- [ ] 07-01-PLAN.md — Offline detection + indicator vertical slice (hook, component, App.tsx wire)
-- [ ] 07-02-PLAN.md — Score queue + drain + game message vertical slice (sync-queue, enqueue, drain, GameIntro)
+- [x] 07-01-PLAN.md — Offline detection + indicator vertical slice (hook, component, App.tsx wire)
+- [x] 07-02-PLAN.md — Score queue + drain + game message vertical slice (sync-queue, enqueue, drain, GameIntro)
 
 ### Phase 8: Navigation, Results, and Action Hub (C3)
 **Goal**: Players can navigate the app correctly from every screen, see a unified expedition summary, take action after results, and the landing page renders at 100% zoom
@@ -139,8 +139,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. GameEvents Emitter and GameState Context (D1) | 0/TBD | Not started | - |
 | 5. Review Round Ordering and Leitner Loop (C2) | 0/TBD | Not started | - |
 | 6. Dynamic Difficulty (C5) | 0/TBD | Not started | - |
-| 7. Offline Resilience (C4) | 0/TBD | Not started | - |
-| 8. Navigation, Results, and Action Hub (C3) | 0/TBD | Not started | - |
+| 7. Offline Resilience (C4) | 2/2 | Complete | 2026-05-21 |
+| 8. Navigation, Results, and Action Hub (C3) | 4/4 | Complete | 2026-05-21 |
 
 ---
 *Roadmap created: 2026-05-20*

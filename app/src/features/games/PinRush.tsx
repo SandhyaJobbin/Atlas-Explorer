@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GameProps, StateEntry } from '@/types';
+import type { GameProps } from '@/types';
 import InteractiveMap from '@/components/map/InteractiveMap';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { useAudio } from '@/hooks/useAudio';
+import { useData } from '@/hooks/useData';
+import { useSession } from '@/hooks/useSession';
+import { computeMistakeWeights } from '@/lib/scoring';
 import { publicAsset } from '@/lib/assets';
 import { useScorePopups } from '@/components/ui/ScorePopup';
 import {
@@ -11,6 +14,7 @@ import {
   checkMapClick,
   checkTimezoneClick,
   calculatePoints,
+  isMapQuestion,
   type PinQuestion,
   TOTAL_QUESTIONS,
   TIME_PER_QUESTION,
@@ -18,6 +22,7 @@ import {
 } from '@/lib/pin-it';
 import StampBadge from '@/components/ui/StampBadge';
 import Typewriter from '@/components/ui/Typewriter';
+import { gameEvents } from '@/hooks/useGameEvents';
 import StateOutline from '@/components/map/StateOutline';
 
 // ─── Timezone badge colours ───────────────────────────────────────────────────
@@ -39,13 +44,14 @@ function tzBg(tz: string) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry }: GameProps) {
+export default function PinRush({ onComplete, onStreakChange, isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   const { triggerScore, ScorePopups } = useScorePopups();
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const [states, setStates] = useState<StateEntry[]>([]);
+  const { states } = useData();
+  const { session } = useSession();
   const [questions, setQuestions] = useState<PinQuestion[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,6 +72,8 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
   const correctCntRef = useRef(0);
   const streakRef = useRef(0);
   const streakPeakRef = useRef(0);
+  const mistakesRef = useRef<Set<string>>(new Set());
+  const correctsRef = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Question tracking ─────────────────────────────────────────────────────
@@ -73,14 +81,11 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch(publicAsset('/data/states.json'))
-      .then((r) => r.json())
-      .then((data: StateEntry[]) => {
-        setStates(data);
-        setQuestions(pickPinQuestions(data));
-        setLoading(false);
-      });
-  }, []);
+    if (states.length === 0) return;
+    const weights = isRetry ? computeMistakeWeights(session, 1) : undefined;
+    setQuestions(pickPinQuestions(states, weights));
+    setLoading(false);
+  }, [states, isRetry, session]);
 
   // ── Timer per question ────────────────────────────────────────────────────
   useEffect(() => {
@@ -147,13 +152,26 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
     }
 
     if (isCorrect) {
+      gameEvents.emit('answerCorrect', {
+        gameIndex: 1,
+        points: 0,
+        streak: streakRef.current + 1,
+        code: clickedCode ?? '',
+      });
       playSound('correct');
       triggerBurst(null, 'sand-burst');
       setShowStamp('CONFIRMED');
       if (streakRef.current + 1 >= 3) playSound('streak');
+      if (isMapQuestion(q)) correctsRef.current.add(q.state.code);
     } else {
+      gameEvents.emit('answerWrong', {
+        gameIndex: 1,
+        code: clickedCode ?? '',
+        streak: 0,
+      });
       playSound('wrong');
       setShowStamp('MISSED');
+      if (isMapQuestion(q)) mistakesRef.current.add(q.state.code);
     }
 
     const pts = calculatePoints(isCorrect, elapsed, SPEED_WINDOW);
@@ -168,6 +186,11 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
     streakRef.current      = isCorrect ? streakRef.current + 1 : 0;
     if (streakRef.current > streakPeakRef.current) streakPeakRef.current = streakRef.current;
 
+    gameEvents.emit('scoreUpdate', {
+      gameIndex: 1,
+      score: scoreRef.current,
+      streak: streakRef.current,
+    });
     setScore(scoreRef.current);
     setStreak(streakRef.current);
     onStreakChange?.(streakRef.current);
@@ -182,6 +205,8 @@ export default function PinRush({ onComplete, onStreakChange, isRetry: _isRetry 
           totalCount: TOTAL_QUESTIONS,
           streakPeak: streakPeakRef.current,
           timerRatio: timeLeft / TIME_PER_QUESTION,
+          mistakes:     Array.from(mistakesRef.current),
+          corrects:     Array.from(correctsRef.current).filter(c => !mistakesRef.current.has(c)),
         });
       } else {
         setShowStamp(null);

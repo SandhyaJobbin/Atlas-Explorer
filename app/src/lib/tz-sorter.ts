@@ -52,6 +52,16 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
+function weightedShuffle<T>(items: T[], weightFn: (item: T) => number): T[] {
+  const copy = [...items];
+  const weighted = copy.map((item) => ({
+    item,
+    key: Math.random() / Math.max(weightFn(item), 0.01),
+  }));
+  weighted.sort((a, b) => a.key - b.key);
+  return weighted.map((w) => w.item);
+}
+
 // ── Round builder ─────────────────────────────────────────────────────────────
 
 /** A minimal state entry shape (matches states.json) */
@@ -62,7 +72,7 @@ interface RawState {
   country: string;
 }
 
-export function buildTzRounds(allStates: RawState[]): TzRound[] {
+export function buildTzRounds(allStates: RawState[], mistakeWeights?: Record<string, number>): TzRound[] {
   // Group states by timezone
   const byTz = new Map<string, RawState[]>();
   for (const s of allStates) {
@@ -83,6 +93,10 @@ export function buildTzRounds(allStates: RawState[]): TzRound[] {
   // Each round picks BUCKETS_PER_ROUND timezones at random (from those with enough remaining states).
   // Track which states have already been used.
   const usedCodes = new Set<string>();
+
+  const pick = mistakeWeights
+    ? (items: RawState[]) => weightedShuffle(items, (s) => mistakeWeights[s.code] ?? 0)
+    : shuffle;
 
   const rounds: TzRound[] = [];
 
@@ -109,7 +123,7 @@ export function buildTzRounds(allStates: RawState[]): TzRound[] {
 
     const states: StateCard[] = shuffle(
       pickedTzs.flatMap((tz) => {
-        const pool = shuffle(byTz.get(tz)!.filter((s) => !usedCodes.has(s.code)));
+        const pool = pick(byTz.get(tz)!.filter((s) => !usedCodes.has(s.code)));
         return pool.slice(0, STATES_PER_BUCKET).map((s): StateCard => {
           usedCodes.add(s.code);
           return {

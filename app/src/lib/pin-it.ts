@@ -31,12 +31,26 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-export function pickPinQuestions(allStates: StateEntry[]): PinQuestion[] {
+function weightedShuffle<T>(items: T[], weightFn: (item: T) => number): T[] {
+  const copy = [...items];
+  const weighted = copy.map((item) => ({
+    item,
+    key: Math.random() / Math.max(weightFn(item), 0.01),
+  }));
+  weighted.sort((a, b) => a.key - b.key);
+  return weighted.map((w) => w.item);
+}
+
+export function pickPinQuestions(allStates: StateEntry[], mistakeWeights?: Record<string, number>): PinQuestion[] {
   const mapCount = TOTAL_QUESTIONS - TIMEZONE_Q_COUNT;
+
+  const pick = mistakeWeights
+    ? (items: StateEntry[]) => weightedShuffle(items, (s) => mistakeWeights[s.code] ?? 0)
+    : shuffle;
 
   const opening  = OPENING_CODES.map((c) => allStates.find((s) => s.code === c)).filter(Boolean) as StateEntry[];
   const used     = new Set(opening.map((s) => s.code));
-  const rest     = shuffle(allStates.filter((s) => !used.has(s.code)));
+  const rest     = pick(allStates.filter((s) => !used.has(s.code)));
   const mapStates = [...opening, ...rest].slice(0, mapCount);
 
   const mapQuestions: MapQuestion[]   = mapStates.map((s) => ({ type: 'map', state: s }));

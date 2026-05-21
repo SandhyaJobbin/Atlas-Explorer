@@ -10,7 +10,7 @@ interface LottiePlayerProps {
   fallback?: React.ReactNode;
 }
 
-const CONFETTI_COLORS = ['#FF9900', '#00A8A2', '#232F3E', '#FEBD69', '#35D07F', '#FF6577'];
+const CONFETTI_COLORS = ['#F9A825', '#2E7D32', '#1A1A2E', '#E5E2DC', '#E8F5E9', '#D32F2F'];
 
 const CONFETTI = Array.from({ length: 28 }, (_, i) => ({
   id: i,

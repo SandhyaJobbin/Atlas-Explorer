@@ -128,6 +128,10 @@ export default function InteractiveMap({
 
   const onRegionHoverRef = useRef(onRegionHover);
 
+  const prevClassStateRef = useRef(new Map<SVGPathElement, Set<string>>());
+  const lastHoverCodeRef = useRef<string | null>(null);
+  const lastHoverTimeRef = useRef(0);
+
   const [svgContent, setSvgContent] = useState<string | null>(svgCache);
   const [loading, setLoading] = useState(!svgCache);
 
@@ -219,12 +223,10 @@ export default function InteractiveMap({
 
       const handlePointerEnter = (e: PointerEvent) => {
         if (onRegionHoverRef.current) {
-          onRegionHoverRef.current(code, { x: e.clientX, y: e.clientY });
-        }
-      };
-
-      const handlePointerMove = (e: PointerEvent) => {
-        if (onRegionHoverRef.current) {
+          const now = Date.now();
+          if (code === lastHoverCodeRef.current && now - lastHoverTimeRef.current < 150) return;
+          lastHoverCodeRef.current = code;
+          lastHoverTimeRef.current = now;
           onRegionHoverRef.current(code, { x: e.clientX, y: e.clientY });
         }
       };
@@ -236,11 +238,9 @@ export default function InteractiveMap({
       };
 
       el.addEventListener('pointerenter', handlePointerEnter);
-      el.addEventListener('pointermove', handlePointerMove);
       el.addEventListener('pointerleave', handlePointerLeave);
       cleanups.push(() => {
         el.removeEventListener('pointerenter', handlePointerEnter);
-        el.removeEventListener('pointermove', handlePointerMove);
         el.removeEventListener('pointerleave', handlePointerLeave);
       });
     });
@@ -253,45 +253,57 @@ export default function InteractiveMap({
     if (!svgContent || !contentRef.current) return;
     const frameId = requestAnimationFrame(() => {
       if (!contentRef.current) return;
-      contentRef.current.querySelectorAll('.atlas-region').forEach((el) => {
+
+    contentRef.current.querySelectorAll('.atlas-region').forEach((el) => {
         if (!(el instanceof SVGPathElement)) return;
         const code = el.getAttribute('data-code') || el.getAttribute('id') || '';
         const tz = timezoneMap[code];
         
-        el.classList.remove('is-active', 'is-highlighted', 'is-correct', 'is-wrong', 'is-unvisited', 'is-tz-hover', 'is-dimmed', 'is-heatmap', 'is-mastered', 'is-cluster-pulse');
+        // Build desired class set for this region
+        const desiredClasses = new Set<string>();
 
         if (heatmapMap && heatmapMap[code]) {
           el.style.fill = heatmapMap[code];
-          el.classList.add('is-heatmap');
+          desiredClasses.add('is-heatmap');
         } else if (code === correctCode) {
           el.style.fill = COLOR_CORRECT;
-          el.classList.add('is-correct');
+          desiredClasses.add('is-correct');
         } else if (code === wrongCode) {
           el.style.fill = COLOR_WRONG;
-          el.classList.add('is-wrong');
+          desiredClasses.add('is-wrong');
         } else if (code === activeCode) {
           el.style.fill = COLOR_ACTIVE;
-          el.classList.add('is-active');
+          desiredClasses.add('is-active');
         } else if (pulsingClusterCodes.includes(code)) {
           el.style.fill = COLOR_ACTIVE;
-          el.classList.add('is-cluster-pulse');
+          desiredClasses.add('is-cluster-pulse');
         } else if (masteredCodes.includes(code)) {
           el.style.fill = tz ? (TZ_FILLS[tz] ?? COLOR_EXPLORED) : COLOR_EXPLORED;
-          el.classList.add('is-mastered');
+          desiredClasses.add('is-mastered');
         } else if (highlightedCodes.includes(code)) {
           el.style.fill = tz ? (TZ_FILLS[tz] ?? COLOR_EXPLORED) : COLOR_EXPLORED;
-          el.classList.add('is-highlighted');
+          desiredClasses.add('is-highlighted');
         } else {
           el.style.fill = defaultFill;
         }
 
         if (hoveredTimezone) {
           if (tz === hoveredTimezone) {
-            el.classList.add('is-tz-hover');
+            desiredClasses.add('is-tz-hover');
           } else {
-            el.classList.add('is-dimmed');
+            desiredClasses.add('is-dimmed');
           }
         }
+
+        // Diff-based classList update — only toggle what changed
+        const prevClasses = prevClassStateRef.current.get(el) || new Set<string>();
+        for (const cls of prevClasses) {
+          if (!desiredClasses.has(cls)) el.classList.remove(cls);
+        }
+        for (const cls of desiredClasses) {
+          if (!prevClasses.has(cls)) el.classList.add(cls);
+        }
+        prevClassStateRef.current.set(el, desiredClasses);
 
         el.style.cursor = mode === 'gameplay' && !correctCode && !wrongCode ? 'crosshair' : 'pointer';
       });
@@ -496,7 +508,7 @@ export default function InteractiveMap({
         }}
         className={[
           'absolute inset-0 origin-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block',
-          '[&_.atlas-region]:transition-all [&_.atlas-region]:duration-300',
+
           '[&_.is-highlighted]:scale-[1.01]',
         ].join(' ')}
         dangerouslySetInnerHTML={{ __html: svgContent ?? '' }}
@@ -568,6 +580,9 @@ export default function InteractiveMap({
           0% { filter: brightness(1); fill: var(--atlas-accent); stroke-width: 3px; transform: scale(1.01); }
           50% { filter: brightness(1.3) drop-shadow(0 0 12px var(--atlas-accent)); fill: var(--atlas-accent); stroke-width: 4px; transform: scale(1.03); }
           100% { filter: brightness(1); fill: var(--atlas-accent); stroke-width: 3px; transform: scale(1); }
+        }
+        .is-active, .is-correct, .is-wrong {
+          transition: all 0.3s ease;
         }
         @media (prefers-reduced-motion: reduce) {
           .is-cluster-pulse {

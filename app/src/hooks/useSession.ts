@@ -14,10 +14,12 @@ import {
   saveSession as libSaveSession,
   clearSession,
   updateTraining as libUpdateTraining,
+  saveJournalEntry as libSaveJournalEntry,
   isTrainingComplete as libIsTrainingComplete,
   recordGameAttempt as libRecordGameAttempt,
 } from '@/lib/session';
 import { evaluateBadges } from '@/lib/badges';
+import { submitAttemptScore } from '@/lib/leaderboard';
 
 // ─── Context value shape ──────────────────────────────────────────────────────
 
@@ -36,12 +38,14 @@ interface SessionContextValue {
   createNewSession: (name: string, waveCode: string, trainerName: string) => void;
   createDemoSession: () => void;
   updateTraining: (type: 'map', code: string) => void;
+  saveJournalEntry: (entry: string) => void;
   isTrainingComplete: () => boolean;
   recordAttempt: (
     gameIndexOrKey: number | string,
     rawAttempt: Partial<GameResult> & { attemptNumber?: number },
   ) => ReturnType<typeof libRecordGameAttempt>;
   recordAttemptFull: (gameIndexOrKey: number | string, result: GameResult) => AttemptFullResult;
+  completeReviewRound: () => void;
   clearCurrentSession: () => void;
 }
 
@@ -60,22 +64,22 @@ export function useSession(): SessionContextValue {
 // ─── Provider factory (used by SessionProvider component) ──────────────────────
 
 export function useSessionState(): SessionContextValue {
-  const [session, setSession] = useState<Session | null>(() => loadSession());
+  const [session, setSession] = useState<Session | null>(() => {
+    const loaded = loadSession();
+    if (loaded) return loaded;
+    const hasOverride = window.location.hash.includes('game=') || window.location.hash.includes('debug=');
+    if (!hasOverride) return null;
+    const demoSession = libCreateDemoSession();
+    libSaveSession(demoSession);
+    return demoSession;
+  });
 
   // Persist on every session change
   useEffect(() => {
     if (session) {
       libSaveSession(session);
-    } else {
-      // Auto-create demo session if debug/game override is present
-      const hasOverride = window.location.hash.includes('game=') || window.location.hash.includes('debug=');
-      if (hasOverride) {
-        const s = libCreateDemoSession();
-        libSaveSession(s);
-        setSession(s);
-      }
     }
-  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session]);
 
   const createNewSession = useCallback(
     (name: string, waveCode: string, trainerName: string) => {
@@ -103,6 +107,15 @@ export function useSessionState(): SessionContextValue {
     },
     [],
   );
+
+  const saveJournalEntry = useCallback((entry: string) => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = structuredClone(prev);
+      libSaveJournalEntry(next, entry);
+      return next;
+    });
+  }, []);
 
   const isTrainingComplete = useCallback(
     () => (session ? libIsTrainingComplete(session) : false),
@@ -140,6 +153,16 @@ export function useSessionState(): SessionContextValue {
           ];
         }
       }
+      submitAttemptScore({
+        agent: next.agent,
+        waveCode: next.waveCode,
+        trainerName: next.trainerName,
+        game: outcome.game.key,
+        attempt: outcome.attempt.attemptNumber,
+        scorePct: outcome.attempt.score,
+        stars: outcome.attempt.stars,
+        passed: outcome.attempt.passed,
+      });
       setSession(next);
       return {
         ...outcome,
@@ -150,6 +173,24 @@ export function useSessionState(): SessionContextValue {
     },
     [session],
   );
+
+  const completeReviewRound = useCallback(() => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = structuredClone(prev);
+      next.reviewCompleted = true;
+      return next;
+    });
+  }, []);
+
+  const resetReviewRound = useCallback(() => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = structuredClone(prev);
+      next.reviewCompleted = false;
+      return next;
+    });
+  }, []);
 
   const clearCurrentSession = useCallback(() => {
     clearSession();
@@ -162,11 +203,14 @@ export function useSessionState(): SessionContextValue {
       createNewSession,
       createDemoSession,
       updateTraining,
+      saveJournalEntry,
       isTrainingComplete,
       recordAttempt,
       recordAttemptFull,
+      completeReviewRound,
+      resetReviewRound,
       clearCurrentSession,
     }),
-    [session, createNewSession, createDemoSession, updateTraining, isTrainingComplete, recordAttempt, recordAttemptFull, clearCurrentSession],
+    [session, createNewSession, createDemoSession, updateTraining, saveJournalEntry, isTrainingComplete, recordAttempt, recordAttemptFull, completeReviewRound, resetReviewRound, clearCurrentSession],
   );
 }

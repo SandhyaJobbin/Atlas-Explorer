@@ -1,5 +1,9 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect } from 'vitest';
 import { getLocalScores, isConfigured, MAX_STARS_PER_SESSION } from '@/lib/leaderboard';
+
 
 describe('leaderboard', () => {
   it('isConfigured returns false when URL is empty', () => {

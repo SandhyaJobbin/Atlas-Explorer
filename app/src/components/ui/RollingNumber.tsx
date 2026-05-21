@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface RollingNumberProps {
   value: number;
@@ -8,10 +8,11 @@ interface RollingNumberProps {
 
 export default function RollingNumber({ value, duration = 1000, className = '' }: RollingNumberProps) {
   const [displayValue, setDisplayValue] = useState(value);
+  const displayValueRef = useRef(value);
 
   useEffect(() => {
     let startTimestamp: number | null = null;
-    const startValue = displayValue;
+    const startValue = displayValueRef.current;
     const endValue = value;
 
     if (startValue === endValue) return;
@@ -24,14 +25,18 @@ export default function RollingNumber({ value, duration = 1000, className = '' }
       const easedProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       
       const current = Math.floor(easedProgress * (endValue - startValue) + startValue);
+      displayValueRef.current = current;
       setDisplayValue(current);
 
       if (progress < 1) {
         window.requestAnimationFrame(step);
+      } else {
+        displayValueRef.current = endValue;
       }
     };
 
-    window.requestAnimationFrame(step);
+    const raf = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(raf);
   }, [value, duration]);
 
   return <span className={className}>{displayValue.toLocaleString()}</span>;

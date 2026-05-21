@@ -4,6 +4,9 @@ import InfoCard from '@/components/ui/InfoCard';
 import { useParticles } from '@/components/ui/ParticleSystem';
 import { useAudio } from '@/hooks/useAudio';
 import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { useData } from '@/hooks/useData';
+import { useSession } from '@/hooks/useSession';
+import { computeMistakeWeights } from '@/lib/scoring';
 import { publicAsset } from '@/lib/assets';
 import { useScorePopups } from '@/components/ui/ScorePopup';
 import {
@@ -20,15 +23,18 @@ import {
 
 import Typewriter from '@/components/ui/Typewriter';
 import RollingNumber from '@/components/ui/RollingNumber';
+import { gameEvents } from '@/hooks/useGameEvents';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry }: GameProps) {
+export default function CodeDrop({ onComplete, onStreakChange, isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   const { triggerScore, ScorePopups } = useScorePopups();
   
   // ── Data ──────────────────────────────────────────────────────────────────
+  const { states } = useData();
+  const { session } = useSession();
   const [questions, setQuestions] = useState<DropQuestion[]>([]);
   const [loading,   setLoading]   = useState(true);
 
@@ -54,6 +60,8 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
   const correctCountRef        = useRef(0);
   const streakRef              = useRef(0);
   const streakPeakRef          = useRef(0);
+  const mistakesRef            = useRef<Set<string>>(new Set());
+  const correctsRef            = useRef<Set<string>>(new Set());
   const timerRef               = useRef<ReturnType<typeof setTimeout>>(undefined);
   const advanceTimerRef        = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef           = useRef<HTMLDivElement>(null);
@@ -61,13 +69,11 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch(publicAsset('/data/states.json'))
-      .then((r) => r.json())
-      .then((data: StateEntry[]) => {
-        setQuestions(pickQuestions(data));
-        setLoading(false);
-      });
-  }, []);
+    if (states.length === 0) return;
+    const weights = isRetry ? computeMistakeWeights(session, 0) : undefined;
+    setQuestions(pickQuestions(states, weights));
+    setLoading(false);
+  }, [states, isRetry, session]);
 
   // ── Start each question ───────────────────────────────────────────────────
   useEffect(() => {
@@ -121,6 +127,20 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
       done = true;
       cancelAnimationFrame(rafId);
       playSound('wrong');
+      const q = questions[qi];
+      if (q) {
+        mistakesRef.current.add(q.state.code);
+        gameEvents.emit('answerWrong', {
+          gameIndex: 0,
+          code: q.state.code,
+          streak: 0,
+        });
+      }
+      gameEvents.emit('scoreUpdate', {
+        gameIndex: 0,
+        score: scoreRef.current,
+        streak: 0,
+      });
       streakRef.current = 0;
       setStreak(0);
       setBlockVisible(false);
@@ -133,6 +153,8 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
             correctCount: correctCountRef.current,
             totalCount:   TOTAL_QUESTIONS,
             streakPeak:   streakPeakRef.current,
+            mistakes:     Array.from(mistakesRef.current),
+            corrects:     Array.from(correctsRef.current).filter(c => !mistakesRef.current.has(c)),
           });
         } else {
           setQi(next);
@@ -169,7 +191,9 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
         score: scoreRef.current, 
         correctCount: correctCountRef.current, 
         totalCount: TOTAL_QUESTIONS, 
-        streakPeak: streakPeakRef.current 
+        streakPeak: streakPeakRef.current,
+        mistakes:     Array.from(mistakesRef.current),
+        corrects:     Array.from(correctsRef.current).filter(c => !mistakesRef.current.has(c)),
       });
     } else {
       setQi(next);
@@ -181,6 +205,8 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
   function commitCorrect(element?: HTMLElement) {
     cancelCurrentRef.current();
     playSound('correct');
+    const q = questions[qi];
+    if (q) correctsRef.current.add(q.state.code);
     triggerBurst(element || null, 'gold-spark');
     
     const elapsed    = (Date.now() - startedAtRef.current) / 1000;
@@ -195,6 +221,17 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
     streakRef.current       = newStreak;
     streakPeakRef.current   = newPeak;
 
+    gameEvents.emit('answerCorrect', {
+      gameIndex: 0,
+      points: pts,
+      streak: newStreak,
+      code: q.state.code,
+    });
+    gameEvents.emit('scoreUpdate', {
+      gameIndex: 0,
+      score: newScore,
+      streak: newStreak,
+    });
     onStreakChange?.(newStreak);
 
     if (newStreak >= 3) playSound('streak');
@@ -228,7 +265,18 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
     if (checkCodeAnswer(q.state.code, valToMatch)) {
       commitCorrect(inputRef.current || undefined);
     } else {
+      gameEvents.emit('answerWrong', {
+        gameIndex: 0,
+        code: q.state.code,
+        streak: 0,
+      });
+      gameEvents.emit('scoreUpdate', {
+        gameIndex: 0,
+        score: scoreRef.current,
+        streak: 0,
+      });
       playSound('wrong');
+      mistakesRef.current.add(q.state.code);
       setInputVal('');
       inputValRef.current = '';
       streakRef.current = 0;
@@ -250,10 +298,13 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
       commitCorrect();
     } else {
       playSound('wrong');
+      mistakesRef.current.add(q.state.code);
       setWrongFlash(true);
+      setLocked(true);
       setTimeout(() => {
         setWrongFlash(false);
-      }, 1000);
+        advanceQuestion();
+      }, 1500);
     }
   }
 
@@ -466,8 +517,28 @@ export default function CodeDrop({ onComplete, onStreakChange, isRetry: _isRetry
             </button>
           </form>
         ) : currentQ?.type === 'timezone' ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="text-[9px] font-black text-white/30 uppercase tracking-widest text-center">Sector Sync Protocol</div>
+
+            {/* Timezone Map Legend */}
+            <div className="flex flex-wrap justify-center gap-2 px-2 py-2 rounded-2xl bg-white/[0.03] border border-white/5">
+              {[
+                { tz: 'EST', color: '#A684C7' },
+                { tz: 'CST', color: '#4FAA76' },
+                { tz: 'MST', color: '#E8A86B' },
+                { tz: 'PST', color: '#5B8DEF' },
+                { tz: 'AKST', color: '#4B9CD3' },
+                { tz: 'AST', color: '#8265A6' },
+                { tz: 'NST', color: '#D977A6' },
+                { tz: 'HST', color: '#4FA8B8' },
+              ].map(({ tz, color }) => (
+                <span key={tz} className="flex items-center gap-1.5 text-[9px] font-bold text-white/50 uppercase tracking-wider">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+                  {tz}
+                </span>
+              ))}
+            </div>
+
             <div className={`grid grid-cols-2 gap-4 ${wrongFlash ? 'animate-shake' : ''}`}>
               {currentQ.choices.map((tz, i) => {
                 const isCorrect = correctState && tz === currentQ.state.timezone;

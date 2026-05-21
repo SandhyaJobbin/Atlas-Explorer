@@ -1,3 +1,5 @@
+import { publicAsset } from '@/lib/assets';
+
 interface StampBadgeProps {
   label: string;
   type: 'success' | 'error' | 'warning' | 'info';
@@ -23,7 +25,10 @@ export default function StampBadge({ label, type, className = '' }: StampBadgePr
       `}
     >
       {/* Texture overlay for "ink" effect */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/concrete-wall.png')] mix-blend-overlay" />
+      <div
+        className="absolute inset-0 opacity-20 pointer-events-none mix-blend-multiply mix-blend-overlay"
+        style={{ backgroundImage: `url("${publicAsset('/assets/patterns/paper-grain.png')}")` }}
+      />
       
       <span className="relative z-10">{label}</span>
       
