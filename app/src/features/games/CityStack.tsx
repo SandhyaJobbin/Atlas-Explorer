@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { GameProps, StateEntry } from '@/types';
 import { useAudio } from '@/hooks/useAudio';
-import { useParticles } from '@/components/ui/ParticleSystem';
-import { AnimatedCard } from '@/components/ui/AnimatedCard';
+import { useData } from '@/hooks/useData';
+import { useSession } from '@/hooks/useSession';
+import { computeMistakeWeights } from '@/lib/scoring';
 import { publicAsset } from '@/lib/assets';
 import { useScorePopups } from '@/components/ui/ScorePopup';
+import { useParticles } from '@/components/ui/ParticleSystem';
+import { AnimatedCard } from '@/components/ui/AnimatedCard';
 import { TZ_FILLS } from '@/lib/timezones';
 import StateOutline from '@/components/map/StateOutline';
 import {
@@ -20,6 +23,8 @@ import {
 } from '@/lib/tz-sorter';
 import StampBadge from '@/components/ui/StampBadge';
 import RollingNumber from '@/components/ui/RollingNumber';
+import { StreakEdgeEffects, StreakMeter } from '@/components/ui/StreakMeter';
+import { gameEvents } from '@/hooks/useGameEvents';
 
 // ─── Card state ────────────────────────────────────────────────────────────────
 
@@ -27,14 +32,15 @@ type CardStatus = 'idle' | 'correct' | 'wrong';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetry }: GameProps) {
+export default function CityStack({ onComplete, onStreakChange, isRetry }: GameProps) {
   const { playSound } = useAudio();
   const { triggerBurst } = useParticles();
   const { triggerScore, ScorePopups } = useScorePopups();
 
   // ── Data ──────────────────────────────────────────────────────────────────
+  const { states } = useData();
+  const { session } = useSession();
   const [rounds,  setRounds]  = useState<TzRound[]>([]);
-  const [states,  setStates]  = useState<StateEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Game state ────────────────────────────────────────────────────────────
@@ -46,9 +52,11 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
   const [cardStatus,   setCardStatus]   = useState<Record<string, CardStatus>>({});
   const [bucketPlaced, setBucketPlaced] = useState<Record<string, StateCard[]>>({});
   const [bucketBadge, setBucketBadge] = useState<string | null>(null);
-  const [_finished,    setFinished]     = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [showStamp,    setShowStamp]    = useState<'CONFIRMED' | 'MISSED' | null>(null);
+  const [streakSweepKey, setStreakSweepKey] = useState(0);
+
+  // ── Refs ──────────────────────────────────────────────────────────────────
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const timerRef          = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -58,20 +66,19 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
   const streakRef         = useRef(0);
   const streakPeakRef     = useRef(0);
   const placedRef         = useRef<Set<string>>(new Set());
+  const mistakesRef       = useRef<Set<string>>(new Set());
+  const correctsRef       = useRef<Set<string>>(new Set());
   const finishedRef       = useRef(false);
   const draggedIdRef      = useRef<string | null>(null);
   const containerRef      = useRef<HTMLDivElement>(null);
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch(publicAsset('/data/states.json'))
-      .then((r) => r.json())
-      .then((stateData: StateEntry[]) => {
-        setStates(stateData);
-        setRounds(buildTzRounds(stateData));
-        setLoading(false);
-      });
-  }, []);
+    if (states.length === 0) return;
+    const weights = isRetry ? computeMistakeWeights(session, 2) : undefined;
+    setRounds(buildTzRounds(states, weights));
+    setLoading(false);
+  }, [states, isRetry, session]);
 
   // ── Start each round ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -81,7 +88,6 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
     setCardStatus({});
     setBucketPlaced({});
     setBucketBadge(null);
-    setFinished(false);
     setTimeLeft(TIME_PER_ROUND);
 
     placedRef.current   = new Set();
@@ -135,6 +141,8 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
           correctCount: correctCntRef.current,
           totalCount:   TOTAL_CORRECT,
           streakPeak:   streakPeakRef.current,
+          mistakes:     Array.from(mistakesRef.current),
+          corrects:     Array.from(correctsRef.current).filter(c => !mistakesRef.current.has(c)),
         });
       } else {
         setShowStamp(null);
@@ -196,16 +204,40 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
       streakRef.current += 1;
       if (streakRef.current >= 3) playSound('streak');
       if (streakRef.current > streakPeakRef.current) streakPeakRef.current = streakRef.current;
+      if (streakRef.current >= 8) setStreakSweepKey((key) => key + 1);
       setStreak(streakRef.current);
+      gameEvents.emit('answerCorrect', {
+        gameIndex: 2,
+        points: 10,
+        streak: streakRef.current,
+        code: card.code,
+      });
+      gameEvents.emit('scoreUpdate', {
+        gameIndex: 2,
+        score: scoreRef.current,
+        streak: streakRef.current,
+      });
       onStreakChange?.(streakRef.current);
 
+      correctsRef.current.add(card.code);
       const totalStates = BUCKETS_PER_ROUND * STATES_PER_BUCKET;
       if (placedRef.current.size === totalStates) {
         const elapsed = (Date.now() - roundStartRef.current) / 1000;
         finishRound(totalStates, elapsed <= 45);
       }
     } else {
+      gameEvents.emit('answerWrong', {
+        gameIndex: 2,
+        code: card.code,
+        streak: 0,
+      });
+      gameEvents.emit('scoreUpdate', {
+        gameIndex: 2,
+        score: scoreRef.current,
+        streak: 0,
+      });
       playSound('wrong');
+      mistakesRef.current.add(card.code);
       streakRef.current = 0;
       setStreak(0);
       onStreakChange?.(0);
@@ -218,8 +250,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
     }
 
     setSelectedCard(null);
-  }, [rounds, ri, bucketPlaced, states, onStreakChange, playSound, triggerBurst, triggerScore]);
-
+  }, [rounds, ri, bucketPlaced, states, onStreakChange, playSound, triggerBurst, triggerScore]); // eslint-disable-line react-hooks/exhaustive-deps
   function onDrop(e: React.DragEvent, timezone: string) {
     e.preventDefault();
     delete (e.currentTarget as HTMLElement).dataset.hover;
@@ -250,9 +281,9 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
 
   if (loading) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center bg-[#080c11] text-white">
-        <div className="w-12 h-12 rounded-full border-2 border-[#10B981] border-t-transparent animate-spin mb-4" />
-        <p className="text-[#10B981] text-xs uppercase tracking-[0.2em] font-bold">Calibrating Sectors</p>
+      <main className="flex-1 flex flex-col items-center justify-center bg-atlas-warm text-atlas-ink">
+        <div className="w-12 h-12 rounded-full border-2 border-atlas-accent border-t-transparent animate-spin mb-4" />
+        <p className="text-atlas-accent text-xs uppercase tracking-[0.2em] font-bold">Preparing Regions</p>
       </main>
     );
   }
@@ -260,7 +291,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
   // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
-    <main ref={containerRef} className="flex-1 flex flex-col bg-[#050c09] p-5 gap-4 overflow-hidden relative">
+    <main ref={containerRef} className="flex-1 flex flex-col bg-atlas-ink p-5 gap-4 overflow-hidden relative">
 
       {/* Thematic Background: Forest Canopy (Performance Optimized) */}
       <div 
@@ -280,6 +311,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
 
       {/* Timer Urgency Vignette */}
       <div className={`timer-urgency ${timerUrgent ? 'active' : ''}`} />
+      <StreakEdgeEffects streak={streak} sweepKey={streakSweepKey} />
 
       {/* Score Popups */}
       <ScorePopups />
@@ -291,37 +323,26 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
             <span className="font-black text-[#10B981] text-xl">AE</span>
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-white font-black text-lg tracking-tight">Tz Sorter</span>
-            <span className="text-[#10B981] text-[9px] uppercase tracking-[0.3em] font-black">
-              Zone Recon
+            <span className="text-white font-black text-lg tracking-tight">Timezone Sort</span>
+            <span className="text-[#8BC6A2] text-xs uppercase tracking-[0.3em] font-black">
+              Sort by Timezone
             </span>
           </div>
         </div>
 
         <AnimatedCard tiltAmount={2} className="flex items-center gap-6 bg-white/[0.05] border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-md">
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Points</span>
+            <span className="text-white/40 text-xs uppercase tracking-widest font-black mb-0.5">Points</span>
             <RollingNumber value={score} className="text-white font-mono text-xl leading-none" />
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Streak</span>
-            <div className={`relative ${streak >= 3 ? 'animate-bounce' : ''}`}>
-              <strong className={`font-mono text-xl leading-none transition-colors duration-300 ${streak >= 3 ? 'text-[#8B5CF6] drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] animate-glow-pulse' : 'text-[#10B981]'}`}>
-                {streak}x
-              </strong>
-              {streak >= 5 && (
-                <img
-                  src={publicAsset('/assets/stickers/fire.gif')}
-                  className="absolute -top-4 -right-4 w-6 h-6 pointer-events-none animate-glow-pulse"
-                  alt=""
-                />
-              )}
-            </div>
+            <span className="text-white/40 text-xs uppercase tracking-widest font-black mb-0.5">Streak</span>
+            <StreakMeter streak={streak} />
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="flex flex-col items-center">
-            <span className="text-white/30 text-[8px] uppercase tracking-widest font-black mb-0.5">Round</span>
+            <span className="text-white/40 text-xs uppercase tracking-widest font-black mb-0.5">Round</span>
             <strong className="text-white/60 font-mono text-lg leading-none">{ri + 1}/{TOTAL_ROUNDS}</strong>
           </div>
         </AnimatedCard>
@@ -372,7 +393,7 @@ export default function CityStack({ onComplete, onStreakChange, isRetry: _isRetr
           />
         ))}
         {trayStates.length === 0 && (
-          <span className="text-[#10B981] text-[10px] font-black uppercase tracking-[0.4em] self-center animate-pulse">
+          <span className="text-[#8BC6A2] text-xs font-black uppercase tracking-[0.4em] self-center animate-pulse">
             All Regions Assigned
           </span>
         )}
@@ -491,9 +512,9 @@ function StateCardTile({
       )}
 
       <div className="flex flex-col leading-tight min-w-0">
-        <span className="text-[11px] font-black truncate max-w-[130px]">{card.name}</span>
+        <span className="text-xs font-black truncate max-w-[130px]">{card.name}</span>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[9px]">{isCA ? '🇨🇦' : '🇺🇸'}</span>
+          <span className="text-[11px]">{isCA ? '🇨🇦' : '🇺🇸'}</span>
         </div>
       </div>
     </div>
@@ -558,12 +579,12 @@ function TzBucketZone({
             className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg"
             style={{ backgroundColor: `${tzColor}33`, border: `2px solid ${tzColor}` }}
           >
-            <span className="text-[7px] font-black" style={{ color: tzColor }}>{bucket.timezone}</span>
+          <span className="text-[11px] font-black" style={{ color: tzColor }}>{bucket.timezone}</span>
           </div>
-          <h3 className="text-white font-black text-[10px] uppercase tracking-[0.3em] text-center">
+          <h3 className="text-white font-black text-xs uppercase tracking-[0.3em] text-center">
             {bucket.timezoneLabel}
           </h3>
-          <span className="text-white/30 text-[8px] font-bold">
+          <span className="text-white/40 text-xs font-bold">
             {placedCards.length}/{STATES_PER_BUCKET} placed
           </span>
         </div>
@@ -593,12 +614,12 @@ function TzBucketZone({
                   </div>
                 )}
                 <div className="flex flex-col leading-tight min-w-0">
-                  <span className="text-[10px] font-black truncate" style={{ color: tzColor }}>
+                  <span className="text-xs font-black truncate" style={{ color: tzColor }}>
                     {card.name}
                   </span>
-                  <span className="text-[8px] font-mono text-white/40">{card.code}</span>
+                  <span className="text-xs font-mono text-white/40">{card.code}</span>
                 </div>
-                <span className="ml-auto text-[10px] opacity-60">{card.country === 'CA' ? '🇨🇦' : '🇺🇸'}</span>
+                <span className="ml-auto text-xs opacity-60">{card.country === 'CA' ? '🇨🇦' : '🇺🇸'}</span>
               </div>
             );
           })}
@@ -610,7 +631,7 @@ function TzBucketZone({
                 className="w-10 h-10 rounded-full border-2 border-dashed animate-spin-slow mb-1"
                 style={{ borderColor: tzColor }}
               />
-              <span className="text-[8px] font-black uppercase tracking-widest text-white">Drop Here</span>
+              <span className="text-xs font-black uppercase tracking-widest text-white">Drop Here</span>
             </div>
           )}
           {hovered && placedCards.length < STATES_PER_BUCKET && (
@@ -618,7 +639,7 @@ function TzBucketZone({
               className="flex-1 min-h-[60px] rounded-2xl border-2 border-dashed flex items-center justify-center animate-pulse"
               style={{ borderColor: `${tzColor}80` }}
             >
-              <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: tzColor }}>
+              <span className="text-xs font-black uppercase tracking-widest" style={{ color: tzColor }}>
                 Release to Place
               </span>
             </div>
